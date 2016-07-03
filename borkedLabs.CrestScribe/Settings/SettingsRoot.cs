@@ -11,6 +11,9 @@ namespace borkedLabs.CrestScribe.Settings
         [JsonProperty("database")]
         public DatabaseSettings Database { get; set; }
 
+        [JsonProperty("crest_location")]
+        public CrestLocationSettings CrestLocation { get; set; }
+
         public static SettingsRoot Load(string file)
         {
             using (StreamReader f = File.OpenText(file))

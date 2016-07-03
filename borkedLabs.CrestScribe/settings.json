@@ -9,5 +9,8 @@
     "user": "root",
     "password": "root",
     "schema": "crest"
+  },
+  "crest_location": {
+    "interval": 15
   }
 }
