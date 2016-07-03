@@ -84,19 +84,25 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="AccessToken.cs" />
-    <Compile Include="MainService.cs">
+    <Compile Include="ScribeService.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="MainService.Designer.cs">
-      <DependentUpon>MainService.cs</DependentUpon>
+    <Compile Include="ScribeService.Designer.cs">
+      <DependentUpon>ScribeService.cs</DependentUpon>
     </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Settings.cs" />
+    <Compile Include="Settings\DatabaseSettings.cs" />
+    <Compile Include="Settings\SettingsRoot.cs" />
+    <Compile Include="Settings\SsoSettings.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
     <None Include="packages.config" />
+    <None Include="settings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

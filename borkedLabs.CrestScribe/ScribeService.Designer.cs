@@ -1,6 +1,6 @@
 ﻿namespace borkedLabs.CrestScribe
 {
-    partial class MainService
+    partial class ScribeService
     {
         /// <summary> 
         /// Required designer variable.

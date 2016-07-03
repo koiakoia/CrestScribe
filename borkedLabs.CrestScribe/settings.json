@@ -1,0 +1,13 @@
+{
+  "sso": {
+    "key": "12345",
+    "secret": "thesecret"
+  },
+  "database": {
+    "host": "localhost",
+    "port": 3306,
+    "user": "root",
+    "password": "root",
+    "schema": "crest"
+  }
+}

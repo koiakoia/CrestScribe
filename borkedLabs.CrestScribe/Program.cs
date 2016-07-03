@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.ServiceProcess;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Threading;
 
 namespace borkedLabs.CrestScribe
 {
@@ -14,12 +9,24 @@ namespace borkedLabs.CrestScribe
         /// </summary>
         static void Main()
         {
+            ScribeSettings.Load("settings.json");
+
+#if (!DEBUG)
             ServiceBase[] ServicesToRun;
             ServicesToRun = new ServiceBase[]
             {
-                new MainService()
+                new ScribeService()
             };
             ServiceBase.Run(ServicesToRun);
+#else
+            var service = new ScribeService();
+            service.StartWork();
+
+            while (true)
+            {
+                Thread.Sleep(60000);
+            }
+#endif
         }
     }
 }
