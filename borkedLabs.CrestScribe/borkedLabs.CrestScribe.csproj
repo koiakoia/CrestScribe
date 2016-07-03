@@ -45,8 +45,8 @@
       <HintPath>..\packages\eZet.EveLib.EveAuth.3.0.1.0\lib\net45\EveLib.EveAuth.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="EveLib.EveCrest, Version=3.4.3.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\eZet.EveLib.EveCrest.3.4.3\lib\net45\EveLib.EveCrest.dll</HintPath>
+    <Reference Include="eZet.EveLib.DynamicCrest, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\eZet.EveLib.DynamicCrest.1.0.0-r1\lib\net45\eZet.EveLib.DynamicCrest.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="MySql.Data, Version=6.9.9.0, Culture=neutral, PublicKeyToken=c5687fc88969c44d, processorArchitecture=MSIL">
@@ -90,6 +90,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CharacterLocation.cs" />
     <Compile Include="Database.cs" />
     <Compile Include="PeriodicTask.cs" />
     <Compile Include="ProjectInstaller.cs">
