@@ -11,6 +11,8 @@ namespace borkedLabs.CrestScribe
         {
             ScribeSettings.Load("settings.json");
 
+            //Because VS cannot debug services, we instead change this section to compile
+            //the actual service in and out depending on configuration
 #if (!DEBUG)
             ServiceBase[] ServicesToRun;
             ServicesToRun = new ServiceBase[]
