@@ -10,9 +10,9 @@ using System.Threading.Tasks;
 
 namespace borkedLabs.CrestScribe
 {
-    public partial class Service1 : ServiceBase
+    public partial class MainService : ServiceBase
     {
-        public Service1()
+        public MainService()
         {
             InitializeComponent();
         }
