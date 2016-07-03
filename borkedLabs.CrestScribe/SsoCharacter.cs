@@ -14,7 +14,7 @@ namespace borkedLabs.CrestScribe
 {
     public class SsoCharacter
     {
-        private DynamicCrest _crest;
+        #region SQLFields
 
         private string _accessToken;
         public string AccessToken
@@ -90,10 +90,13 @@ namespace borkedLabs.CrestScribe
         }
 
         public bool Valid { get; set; }
+        #endregion
+
+        private DynamicCrest _crest;
+        private CancellationTokenSource _pollCts = new CancellationTokenSource();
+        private Task _task;
 
         public DateTime LastLocationQuery { get; set; }
-
-        public Timer _updateTimer;
 
         public SsoCharacter()
         {
@@ -182,28 +185,6 @@ namespace borkedLabs.CrestScribe
             }
         }
 
-        public async Task Update()
-        {
-            if(!Valid)
-            {
-                return;
-            }
-
-            if (TokenExpiration < DateTime.UtcNow)
-            {
-                bool changed = await RefreshAccess();
-                if(changed)
-                {
-                    Save();
-                }
-            }
-
-            if (ShouldGetLocation())
-            {
-                await GetLocation();
-            }
-        }
-
         public bool Save()
         {
             using (MySqlConnection sql = Database.GetConnection())
@@ -224,6 +205,49 @@ namespace borkedLabs.CrestScribe
         public bool ShouldGetLocation()
         {
             return Valid && (LastLocationQuery < DateTime.UtcNow.AddSeconds(ScribeSettings.Settings.CrestLocation.Interval));
+        }
+        
+        public Task StartCrestPoll()
+        {
+            if(_task != null)
+            {
+                return null;
+            }
+
+            _task = PeriodicTask.Run(async () => { await Poll(); }, new TimeSpan(0, 0, 0, ScribeSettings.Settings.CrestLocation.Interval), _pollCts.Token);
+
+            return _task;
+        }
+
+        public async Task Poll()
+        {
+            if (!Valid)
+            {
+                //lets exit our polling since are we invalid now
+                _pollCts.Cancel();
+                return;
+            }
+
+            if (TokenExpiration < DateTime.UtcNow)
+            {
+                bool changed = await RefreshAccess();
+                if (changed)
+                {
+                    Save();
+                }
+            }
+
+            if (ShouldGetLocation())
+            {
+                await GetLocation();
+            }
+        }
+
+        public void StopCrestPoll()
+        {
+            _pollCts.Cancel();
+            Task.WaitAll(_task);
+            _task = null;
         }
     }
 }

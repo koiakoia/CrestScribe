@@ -78,7 +78,7 @@ namespace borkedLabs.CrestScribe
 
                 foreach (var character in newCharacters.GetConsumingEnumerable())
                 {
-                    var task = PeriodicTask.Run(async () => { await character.Update(); }, new TimeSpan(0, 0, 0, ScribeSettings.Settings.CrestLocation.Interval), _cts.Token);
+                    var task = character.StartCrestPoll();
 
                     taskList.Add(task);
                 }
