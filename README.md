@@ -6,6 +6,6 @@ This C# application is meant to run as a Windows service that performs its job i
 
 ##Requirements
 
-Visual Studio 2015
-MySQL
-.NET Framework 4.5.2
+* Visual Studio 2015
+* MySQL
+* .NET Framework 4.5.2
