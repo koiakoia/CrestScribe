@@ -133,7 +133,8 @@ namespace borkedLabs.CrestScribe
 
                 if(webResponse != null)
                 {
-                    if(webResponse.StatusCode == HttpStatusCode.BadRequest)
+                    if(webResponse.StatusCode == HttpStatusCode.BadRequest ||
+                        webResponse.StatusCode == HttpStatusCode.Unauthorized)
                     {
                         Valid = false;
                         return true;
