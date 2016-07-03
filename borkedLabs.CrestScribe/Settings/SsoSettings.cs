@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+using eZet.EveLib.EveAuthModule;
 
 namespace borkedLabs.CrestScribe.Settings
 {
@@ -9,5 +10,14 @@ namespace borkedLabs.CrestScribe.Settings
 
         [JsonProperty("secret")]
         public string Secret { get; set; }
+
+        [JsonIgnore]
+        public string EncodedKey
+        {
+            get
+            {
+                return EveAuth.Encode(Key, Secret);
+            }
+        }
     }
 }
