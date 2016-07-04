@@ -263,6 +263,12 @@ namespace borkedLabs.CrestScribe
                 {
                     Save();
                 }
+
+                if(!Valid)
+                {
+                    _pollCts.Cancel();
+                    return;
+                }
             }
 
             if(_characterCrest == null)
