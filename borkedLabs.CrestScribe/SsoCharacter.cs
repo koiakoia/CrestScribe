@@ -206,15 +206,26 @@ namespace borkedLabs.CrestScribe
         {
             return Valid && (LastLocationQuery < DateTime.UtcNow.AddSeconds(ScribeSettings.Settings.CrestLocation.Interval));
         }
-        
+
+        private TimeSpan _pollDelay;
+
         public Task StartCrestPoll()
         {
-            if(_task != null)
+            if (_task != null)
             {
                 return null;
             }
 
-            _task = PeriodicTask.Run(async () => { await Poll(); }, new TimeSpan(0, 0, 0, ScribeSettings.Settings.CrestLocation.Interval), _pollCts.Token);
+            _pollDelay = new TimeSpan(0, 0, 0, ScribeSettings.Settings.CrestLocation.Interval);
+            _task = Task.Run(async () => {
+                while (!_pollCts.IsCancellationRequested)
+                {
+                    await Task.Delay(_pollDelay, _pollCts.Token);
+
+                    if (!_pollCts.IsCancellationRequested)
+                        await Poll();
+                }
+            });
 
             return _task;
         }
@@ -226,6 +237,19 @@ namespace borkedLabs.CrestScribe
                 //lets exit our polling since are we invalid now
                 _pollCts.Cancel();
                 return;
+            }
+
+            var session = Session.Find(CharacterId, UserId);
+
+            if(session == null || session.UpdatedAt.AddMinutes(1) < DateTime.UtcNow)
+            {
+                //not an active session, dont poll as often but also dont continue
+                _pollDelay = new TimeSpan(0, 0, 0, 60);
+                return;
+            }
+            else
+            {
+                _pollDelay = new TimeSpan(0, 0, 0, ScribeSettings.Settings.CrestLocation.Interval);
             }
 
             if (TokenExpiration < DateTime.UtcNow)
