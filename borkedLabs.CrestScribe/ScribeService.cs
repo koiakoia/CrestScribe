@@ -58,6 +58,11 @@ namespace borkedLabs.CrestScribe
             }
         }
 
+        /// <summary>
+        /// Main worker thread that grabs characters and spawns processing tasks
+        /// Ideally we rewrite this to have a fixed number of worker threads
+        /// so that we can better control our http request spam....
+        /// </summary>
         private void workThread()
         {
             var newCharacters = new BlockingCollection<SsoCharacter>();
@@ -76,11 +81,21 @@ namespace borkedLabs.CrestScribe
                 }
                 createdCutoff = DateTime.UtcNow;
 
+                int i = 0;
                 foreach (var character in newCharacters.GetConsumingEnumerable())
                 {
                     var task = character.StartCrestPoll();
 
                     taskList.Add(task);
+
+                    // lets cooldown task spawning, otherwise we may stack up task work too hard
+                    // i.e. too many http requests in one go
+                    i++;
+                    if(i > 20)
+                    {
+                        i = 0;
+                        Thread.Sleep(1000);
+                    }
                 }
 
                 _waitEvent.WaitOne(60000);

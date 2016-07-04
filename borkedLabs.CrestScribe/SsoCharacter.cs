@@ -95,6 +95,7 @@ namespace borkedLabs.CrestScribe
         private DynamicCrest _crest;
         private CancellationTokenSource _pollCts = new CancellationTokenSource();
         private Task _task;
+        private Expando _characterCrest;
 
         public DateTime LastLocationQuery { get; set; }
 
@@ -154,13 +155,16 @@ namespace borkedLabs.CrestScribe
             return false;
         }
 
-
         public async Task<bool> GetLocation()
         {
+            if(_characterCrest == null)
+            {
+                throw new InvalidOperationException("Character CREST data not fetched");
+            }
+
             try
             {
-                var character = await (await (await _crest.GetAsync(_crest.Host)).GetAsync(r => r.decode)).GetAsync(r => r.character);
-                var location = await character.GetAsync(r => r.location);
+                var location = await _characterCrest.GetAsync(r => r.location);
 
                 LastLocationQuery = DateTime.UtcNow;
 
@@ -259,6 +263,11 @@ namespace borkedLabs.CrestScribe
                 {
                     Save();
                 }
+            }
+
+            if(_characterCrest == null)
+            {
+                _characterCrest = await (await (await _crest.GetAsync(_crest.Host)).GetAsync(r => r.decode)).GetAsync(r => r.character);
             }
 
             if (ShouldGetLocation())
