@@ -15,7 +15,7 @@ namespace borkedLabs.CrestScribe
         /// </summary>
         static void Main(string[] args)
         {
-            ScribeSettings.Load("settings.json");
+            ScribeSettings.Load(System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "settings.json"));
 
             //Because VS cannot debug services, we instead change this section to compile
             //the actual service in and out depending on configuration
