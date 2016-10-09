@@ -117,6 +117,7 @@
     <Compile Include="Settings\CrestLocationSettings.cs" />
     <Compile Include="Settings\SettingsRoot.cs" />
     <Compile Include="Settings\SsoSettings.cs" />
+    <Compile Include="Settings\WorkerSettings.cs" />
     <Compile Include="SsoCharacter.cs" />
   </ItemGroup>
   <ItemGroup>

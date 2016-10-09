@@ -12,5 +12,8 @@
   },
   "crest_location": {
     "interval": 15
+  },
+  "worker": {
+    "total": 10
   }
 }

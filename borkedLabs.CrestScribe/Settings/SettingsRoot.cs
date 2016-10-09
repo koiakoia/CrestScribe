@@ -14,6 +14,9 @@ namespace borkedLabs.CrestScribe.Settings
         [JsonProperty("crest_location")]
         public CrestLocationSettings CrestLocation { get; set; }
 
+        [JsonProperty("worker")]
+        public WorkerSettings Worker { get; set; }
+
         public static SettingsRoot Load(string file)
         {
             using (StreamReader f = File.OpenText(file))
