@@ -136,7 +136,11 @@ namespace borkedLabs.CrestScribe
                         _workerCts.Cancel();
                         foreach (var w in _queryWorkers)
                         {
-                            w.Thread.Join(500);
+                            if (!w.Thread.Join(500))
+                            {
+                                //nuke the thread, really nothing else we can do anyway
+                                w.Thread.Abort();
+                            }
                         }
 
                         createdCutoff = DateTime.SpecifyKind(DateTime.MinValue, DateTimeKind.Utc);
@@ -152,7 +156,11 @@ namespace borkedLabs.CrestScribe
             _workerCts.Cancel();
             foreach (var w in _queryWorkers)
             {
-                w.Thread.Join(500);
+                if(!w.Thread.Join(500))
+                {
+                    //nuke the thread, really nothing else we can do anyway
+                    w.Thread.Abort();
+                }
             }
         }
     }
