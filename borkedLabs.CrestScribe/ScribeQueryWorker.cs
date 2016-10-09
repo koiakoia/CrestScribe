@@ -39,7 +39,7 @@ namespace borkedLabs.CrestScribe
                 if(character != null)
                 {
                     var t = Task.Run(character.Poll);
-                    t.Wait();
+                    t.Wait(_cancelToken);
                 }
             }
         }
