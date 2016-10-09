@@ -255,12 +255,21 @@ namespace borkedLabs.CrestScribe
                 }
             }
 
+            // CREST may not return anything when the server is down :/
             if(_characterCrest == null)
             {
-                _characterCrest = await (await (await _crest.GetAsync(_crest.Host)).GetAsync(r => r.decode)).GetAsync(r => r.character);
+                try
+                {
+                    _characterCrest = await (await (await _crest.GetAsync(_crest.Host)).GetAsync(r => r.decode)).GetAsync(r => r.character);
+                }
+                catch
+                {
+                    _characterCrest = null;
+                }
             }
 
-            if (ShouldGetLocation())
+            if ( _characterCrest != null &&
+                ShouldGetLocation())
             {
                 await GetLocation();
             }
