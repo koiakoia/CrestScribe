@@ -93,11 +93,10 @@ namespace borkedLabs.CrestScribe
         #endregion
 
         private DynamicCrest _crest;
-        private CancellationTokenSource _pollCts = new CancellationTokenSource();
-        private Task _task;
         private Expando _characterCrest;
 
-        public DateTime LastLocationQuery { get; set; }
+        public DateTime LastLocationQueryAt { get; set; }
+        public TimeSpan PollInterval { get; set; }
 
         public SsoCharacter()
         {
@@ -105,7 +104,7 @@ namespace borkedLabs.CrestScribe
             _crest.EncodedKey = ScribeSettings.Settings.Sso.EncodedKey;
             _crest.RefreshToken = RefreshToken;
             _crest.EnableAutomaticTokenRefresh = false;
-            LastLocationQuery = DateTime.MinValue;
+            LastLocationQueryAt = DateTime.MinValue;
         }
 
         /// <summary>
@@ -166,7 +165,7 @@ namespace borkedLabs.CrestScribe
             {
                 var location = await _characterCrest.GetAsync(r => r.location);
 
-                LastLocationQuery = DateTime.UtcNow;
+                LastLocationQueryAt = DateTime.UtcNow;
 
                 if (location.Properties.ContainsKey("solarSystem"))
                 {
@@ -208,38 +207,21 @@ namespace borkedLabs.CrestScribe
 
         public bool ShouldGetLocation()
         {
-            return Valid && (LastLocationQuery < DateTime.UtcNow.AddSeconds(ScribeSettings.Settings.CrestLocation.Interval));
+            return Valid && (LastLocationQueryAt < DateTime.UtcNow.AddSeconds(ScribeSettings.Settings.CrestLocation.Interval));
         }
 
-        private TimeSpan _pollDelay;
-
-        public Task StartCrestPoll()
+        public int DelayRemainingMilliseconds
         {
-            if (_task != null)
+            get
             {
-                return null;
+                return (DateTime.UtcNow-(LastLocationQueryAt+PollInterval)).Milliseconds;
             }
-
-            _pollDelay = new TimeSpan(0, 0, 0, ScribeSettings.Settings.CrestLocation.Interval);
-            _task = Task.Run(async () => {
-                while (!_pollCts.IsCancellationRequested)
-                {
-                    await Task.Delay(_pollDelay, _pollCts.Token);
-
-                    if (!_pollCts.IsCancellationRequested)
-                        await Poll();
-                }
-            });
-
-            return _task;
         }
 
         public async Task Poll()
         {
             if (!Valid)
             {
-                //lets exit our polling since are we invalid now
-                _pollCts.Cancel();
                 return;
             }
 
@@ -248,12 +230,12 @@ namespace borkedLabs.CrestScribe
             if(session == null || session.UpdatedAt.AddMinutes(1) < DateTime.UtcNow)
             {
                 //not an active session, dont poll as often but also dont continue
-                _pollDelay = new TimeSpan(0, 0, 0, 60);
+                PollInterval = new TimeSpan(0, 0, 0, 60);
                 return;
             }
             else
             {
-                _pollDelay = new TimeSpan(0, 0, 0, ScribeSettings.Settings.CrestLocation.Interval);
+                PollInterval = new TimeSpan(0, 0, 0, ScribeSettings.Settings.CrestLocation.Interval);
             }
 
             if (TokenExpiration < DateTime.UtcNow)
@@ -266,7 +248,6 @@ namespace borkedLabs.CrestScribe
 
                 if(!Valid)
                 {
-                    _pollCts.Cancel();
                     return;
                 }
             }
@@ -280,13 +261,6 @@ namespace borkedLabs.CrestScribe
             {
                 await GetLocation();
             }
-        }
-
-        public void StopCrestPoll()
-        {
-            _pollCts.Cancel();
-            Task.WaitAll(_task);
-            _task = null;
         }
     }
 }
