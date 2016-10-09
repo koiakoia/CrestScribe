@@ -38,8 +38,24 @@ namespace borkedLabs.CrestScribe
 
                 if(character != null)
                 {
-                    var t = Task.Run(character.Poll);
-                    t.Wait(_cancelToken);
+                    try
+                    {
+                        var t = Task.Run(character.Poll);
+                        t.Wait(_cancelToken);
+                    }
+                    catch (MySql.Data.MySqlClient.MySqlException ex)
+                    {
+                        switch (ex.Number)
+                        {
+                            case 0: //no connect
+                            case (int)MySql.Data.MySqlClient.MySqlErrorCode.UnableToConnectToHost:
+                                //catch these silently, the main service thread will do magic to cancel out everything
+                                break;
+                            default:
+                                throw ex;
+                                break;
+                        }
+                    }
                 }
             }
         }

@@ -15,11 +15,10 @@ namespace borkedLabs.CrestScribe
 {
     public partial class ScribeService : ServiceBase
     {
-   //     private ManualResetEvent _waitEvent = new ManualResetEvent(false);
         private Thread _thread = null;
         CancellationTokenSource _cts = new CancellationTokenSource();
+        CancellationTokenSource _workerCts = new CancellationTokenSource();
 
-        private bool _shutdown = false;
 
         private List<ScribeQueryWorker> _queryWorkers = new List<ScribeQueryWorker>();
 
@@ -40,14 +39,6 @@ namespace borkedLabs.CrestScribe
             _thread.Name = "scribe service thread";
             _thread.IsBackground = true;
             _thread.Start();
-
-            for (int i = 0; i < 15; i++)
-            {
-                var queryWorker = new ScribeQueryWorker(_queryQueue, _cts.Token);
-                _queryWorkers.Add(queryWorker);
-
-                queryWorker.Start();
-            }
         }
 
         protected override void OnStart(string[] args)
@@ -62,7 +53,6 @@ namespace borkedLabs.CrestScribe
 
         public void StopWork()
         {
-            _shutdown = true;
             _cts.Cancel();
             if (!_thread.Join(10000))
             {
@@ -81,36 +71,86 @@ namespace borkedLabs.CrestScribe
 
             while (!_cts.Token.IsCancellationRequested)
             {
-                var characters = Database.GetSSOCharacters(createdCutoff);
+                bool dbAvaliable = true;
+                List<SsoCharacter> characters = null;
+                Database.GetConnection();
 
-                int i = 0;
-                foreach (var character in characters)
+                try
                 {
-                    character.QueryQueue = _queryQueue;
-                    _queryQueue.Add(character);
-
-                    i++;
-                    if (i > 20)
+                    characters = Database.GetSSOCharacters(createdCutoff);
+                }
+                catch (MySql.Data.MySqlClient.MySqlException ex)
+                {
+                    switch (ex.Number)
                     {
-                        i = 0;
-                        Thread.Sleep(1000);
+                        case 0: //no connect
+                        case (int)MySql.Data.MySqlClient.MySqlErrorCode.UnableToConnectToHost:
+                            dbAvaliable = false;
+                            break;
                     }
                 }
 
-                if(characters.Count > 0)
+                if(dbAvaliable)
                 {
-                    createdCutoff = DateTime.UtcNow;
+                    //database up?
+                    //do we have workers
+                    //create them if they don't exist!
+                    int i = 0;
+                    if (_queryWorkers.Count == 0)
+                    {
+                        for (i = 0; i < ScribeSettings.Settings.Worker.Total; i++)
+                        {
+                            var queryWorker = new ScribeQueryWorker(_queryQueue, _workerCts.Token);
+                            _queryWorkers.Add(queryWorker);
+
+                            queryWorker.Start();
+                        }
+                    }
+
+                    foreach (var character in characters)
+                    {
+                        character.QueryQueue = _queryQueue;
+                        _queryQueue.Add(character);
+
+                        i++;
+                        if (i > 20)
+                        {
+                            i = 0;
+                            Thread.Sleep(1000);
+                        }
+                    }
+
+                    if (characters.Count > 0)
+                    {
+                        createdCutoff = DateTime.UtcNow;
+                    }
+
+                }
+                else
+                {
+                    //db is down, we should close the workers
+                    if (_queryWorkers.Count != 0)
+                    {
+                        _workerCts.Cancel();
+                        foreach (var w in _queryWorkers)
+                        {
+                            w.Thread.Join(500);
+                        }
+
+                        createdCutoff = DateTime.SpecifyKind(DateTime.MinValue, DateTimeKind.Utc);
+
+                        _queryQueue.Dispose();
+                        _queryQueue = new BlockingCollection<SsoCharacter>();
+                    }
                 }
 
                 _cts.Token.WaitHandle.WaitOne(60000);
             }
 
-            if(_shutdown)
+            _workerCts.Cancel();
+            foreach (var w in _queryWorkers)
             {
-                foreach (var w in _queryWorkers)
-                {
-                    w.Thread.Join(500);
-                }
+                w.Thread.Join(500);
             }
         }
     }

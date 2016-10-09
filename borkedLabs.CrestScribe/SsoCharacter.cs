@@ -236,7 +236,7 @@ namespace borkedLabs.CrestScribe
             if(session == null || session.UpdatedAt.AddMinutes(1) < DateTime.UtcNow)
             {
                 //not an active session, dont poll as often but also dont continue
-                _pollTimer = new Timer(new TimerCallback(_pollTimerCallback), null, 60*1000, Timeout.Infinite);
+                _pollTimer = new Timer(new TimerCallback(_pollTimerCallback), null, 20*1000, Timeout.Infinite);
 
                 return;
             }
