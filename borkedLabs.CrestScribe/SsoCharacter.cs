@@ -3,12 +3,13 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 using eZet.EveLib.DynamicCrest;
 using MySql.Data.MySqlClient;
 using Dapper;
 using System.Net;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Collections.Concurrent;
 
 namespace borkedLabs.CrestScribe
 {
@@ -97,6 +98,11 @@ namespace borkedLabs.CrestScribe
 
         public DateTime LastLocationQueryAt { get; set; }
         public TimeSpan PollInterval { get; set; }
+        private Timer _pollTimer;
+        public BlockingCollection<SsoCharacter> QueryQueue
+        {
+            get;set;
+        }
 
         public SsoCharacter()
         {
@@ -105,8 +111,16 @@ namespace borkedLabs.CrestScribe
             _crest.RefreshToken = RefreshToken;
             _crest.EnableAutomaticTokenRefresh = false;
             LastLocationQueryAt = DateTime.MinValue;
-        }
 
+            _pollTimer = null;
+        }
+        
+        private void _pollTimerCallback(object state)
+        {
+            _pollTimer.Dispose();
+
+            QueryQueue.Add(this);
+        }
         /// <summary>
         /// Attempts to refresh the tokens. Failure of token refresh (bad tokens) may set the valid flag to false.
         /// </summary>
@@ -209,15 +223,7 @@ namespace borkedLabs.CrestScribe
         {
             return Valid && (LastLocationQueryAt < DateTime.UtcNow.AddSeconds(ScribeSettings.Settings.CrestLocation.Interval));
         }
-
-        public int DelayRemainingMilliseconds
-        {
-            get
-            {
-                return (DateTime.UtcNow-(LastLocationQueryAt+PollInterval)).Milliseconds;
-            }
-        }
-
+      
         public async Task Poll()
         {
             if (!Valid)
@@ -230,12 +236,9 @@ namespace borkedLabs.CrestScribe
             if(session == null || session.UpdatedAt.AddMinutes(1) < DateTime.UtcNow)
             {
                 //not an active session, dont poll as often but also dont continue
-                PollInterval = new TimeSpan(0, 0, 0, 60);
+                _pollTimer = new Timer(new TimerCallback(_pollTimerCallback), null, 60*1000, Timeout.Infinite);
+
                 return;
-            }
-            else
-            {
-                PollInterval = new TimeSpan(0, 0, 0, ScribeSettings.Settings.CrestLocation.Interval);
             }
 
             if (TokenExpiration < DateTime.UtcNow)
@@ -261,6 +264,8 @@ namespace borkedLabs.CrestScribe
             {
                 await GetLocation();
             }
+
+            _pollTimer = new Timer(new TimerCallback(_pollTimerCallback), null, ScribeSettings.Settings.CrestLocation.Interval * 1000, Timeout.Infinite);
         }
     }
 }

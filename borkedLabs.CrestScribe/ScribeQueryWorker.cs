@@ -10,15 +10,13 @@ namespace borkedLabs.CrestScribe
 {
     public class ScribeQueryWorker
     {
-        private BlockingCollection<SsoCharacter> _statusQueue;
         private BlockingCollection<SsoCharacter> _queryQueue;
         private CancellationToken _cancelToken;
 
         public Thread Thread { get; private set; }
 
-        public ScribeQueryWorker(BlockingCollection<SsoCharacter> queryQueue, BlockingCollection<SsoCharacter> statusQueue, CancellationToken cancelToken)
+        public ScribeQueryWorker(BlockingCollection<SsoCharacter> queryQueue, CancellationToken cancelToken)
         {
-            _statusQueue = statusQueue;
             _queryQueue = queryQueue;
             _cancelToken = cancelToken;
 
@@ -42,8 +40,6 @@ namespace borkedLabs.CrestScribe
                 {
                     var t = Task.Run(character.Poll);
                     t.Wait();
-
-                    _statusQueue.Add(character);
                 }
             }
         }

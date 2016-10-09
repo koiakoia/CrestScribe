@@ -101,7 +101,6 @@
     <Compile Include="ProjectInstaller.Designer.cs">
       <DependentUpon>ProjectInstaller.cs</DependentUpon>
     </Compile>
-    <Compile Include="ScribeStatusWorker.cs" />
     <Compile Include="ScribeQueryWorker.cs" />
     <Compile Include="ScribeService.cs">
       <SubType>Component</SubType>

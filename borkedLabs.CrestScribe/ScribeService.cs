@@ -22,7 +22,6 @@ namespace borkedLabs.CrestScribe
         private bool _shutdown = false;
 
         private List<ScribeQueryWorker> _queryWorkers = new List<ScribeQueryWorker>();
-        private List<ScribeStatusWorker> _statusWorkers = new List<ScribeStatusWorker>();
 
 
         public ScribeService()
@@ -31,7 +30,6 @@ namespace borkedLabs.CrestScribe
         }
 
         private BlockingCollection<SsoCharacter> _queryQueue = new BlockingCollection<SsoCharacter>();
-        private BlockingCollection<SsoCharacter> _statusQueue = new BlockingCollection<SsoCharacter>();
 
         public void StartWork()
         {
@@ -45,14 +43,10 @@ namespace borkedLabs.CrestScribe
 
             for (int i = 0; i < 15; i++)
             {
-                var queryWorker = new ScribeQueryWorker(_queryQueue, _statusQueue, _cts.Token);
+                var queryWorker = new ScribeQueryWorker(_queryQueue, _cts.Token);
                 _queryWorkers.Add(queryWorker);
 
-                var statusWorker = new ScribeStatusWorker(_statusQueue, _queryQueue, _cts.Token);
-                _statusWorkers.Add(statusWorker);
-
                 queryWorker.Start();
-                statusWorker.Start();
             }
         }
 
@@ -70,7 +64,6 @@ namespace borkedLabs.CrestScribe
         {
             _shutdown = true;
             _cts.Cancel();
-           // _waitEvent.Set();
             if (!_thread.Join(10000))
             {
                 _thread.Abort();
@@ -88,13 +81,12 @@ namespace borkedLabs.CrestScribe
 
             while (!_cts.Token.IsCancellationRequested)
             {
-               // _waitEvent.Reset();
-
                 var characters = Database.GetSSOCharacters(createdCutoff);
 
                 int i = 0;
                 foreach (var character in characters)
                 {
+                    character.QueryQueue = _queryQueue;
                     _queryQueue.Add(character);
 
                     i++;
@@ -111,17 +103,11 @@ namespace borkedLabs.CrestScribe
                 }
 
                 _cts.Token.WaitHandle.WaitOne(60000);
-              //  _waitEvent.WaitOne(60000);
             }
 
             if(_shutdown)
             {
                 foreach (var w in _queryWorkers)
-                {
-                    w.Thread.Join(500);
-                }
-
-                foreach (var w in _statusWorkers)
                 {
                     w.Thread.Join(500);
                 }
