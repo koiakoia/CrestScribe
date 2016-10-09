@@ -98,6 +98,8 @@ namespace borkedLabs.CrestScribe
                     int i = 0;
                     if (_queryWorkers.Count == 0)
                     {
+                        //reset the token as it may be triggered
+                        _workerCts = new CancellationTokenSource();
                         for (i = 0; i < ScribeSettings.Settings.Worker.Total; i++)
                         {
                             var queryWorker = new ScribeQueryWorker(_queryQueue, _workerCts.Token);
