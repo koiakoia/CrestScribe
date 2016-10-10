@@ -40,7 +40,7 @@ namespace borkedLabs.CrestScribe
                 {
                     try
                     {
-                        var t = Task.Run(character.Poll);
+                        var t = Task.Run(character.Poll,_cancelToken);
                         t.Wait(_cancelToken);
                     }
                     catch (MySql.Data.MySqlClient.MySqlException ex)
