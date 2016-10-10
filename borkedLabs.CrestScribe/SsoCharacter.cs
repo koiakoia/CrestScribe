@@ -273,7 +273,13 @@ namespace borkedLabs.CrestScribe
             if ( _characterCrest != null &&
                 ShouldGetLocation())
             {
-                await GetLocation();
+                if(!await GetLocation())
+                {
+                    //not an active char or CREST is having issues, slow down
+                    _pollTimer = new Timer(new TimerCallback(_pollTimerCallback), null, 20 * 1000, Timeout.Infinite);
+
+                    return;
+                }
             }
 
             _pollTimer = new Timer(new TimerCallback(_pollTimerCallback), null, ScribeSettings.Settings.CrestLocation.Interval * 1000, Timeout.Infinite);
