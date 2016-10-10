@@ -19,7 +19,9 @@ namespace borkedLabs.CrestScribe
 
                 string q = @"SELECT user_id as UserId, refresh_token as RefreshToken, access_token AccessToken,
                                     character_id CharacterId,character_owner_hash CharacterOwnerHash, 
-                                    access_token_expiration TokenExpiration, created_at CreatedAt, updated_at UpdatedAt, valid Valid
+                                    access_token_expiration TokenExpiration, created_at CreatedAt, 
+                                    updated_at UpdatedAt, valid Valid,
+                                    always_track_location AlwaysTrackLocation
                             FROM user_ssocharacter WHERE created_at > @createdAtCutoff";
                 return sql.Query<SsoCharacter>(q, new { createdAtCutoff = createdAtCutoff } ).ToList();
             }

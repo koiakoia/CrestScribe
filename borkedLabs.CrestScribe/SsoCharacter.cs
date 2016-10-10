@@ -51,6 +51,8 @@ namespace borkedLabs.CrestScribe
 
         public UInt64 CharacterId { get; set; }
 
+        public bool AlwaysTrackLocation { get; set; }
+
         private DateTime _tokenExpiration;
         public DateTime TokenExpiration
         {
@@ -233,7 +235,7 @@ namespace borkedLabs.CrestScribe
 
             var session = Session.Find(CharacterId, UserId);
 
-            if(session == null || session.UpdatedAt.AddMinutes(1) < DateTime.UtcNow)
+            if(session == null || (!AlwaysTrackLocation && session.UpdatedAt.AddMinutes(1) < DateTime.UtcNow ) )
             {
                 //not an active session, dont poll as often but also dont continue
                 _pollTimer = new Timer(new TimerCallback(_pollTimerCallback), null, 20*1000, Timeout.Infinite);
