@@ -95,12 +95,11 @@ namespace borkedLabs.CrestScribe
                     //database up?
                     //do we have workers
                     //create them if they don't exist!
-                    int i = 0;
                     if (_queryWorkers.Count == 0)
                     {
                         //reset the token as it may be triggered
                         _workerCts = new CancellationTokenSource();
-                        for (i = 0; i < ScribeSettings.Settings.Worker.Total; i++)
+                        for (int i = 0; i < ScribeSettings.Settings.Worker.Total; i++)
                         {
                             var queryWorker = new ScribeQueryWorker(_queryQueue, _workerCts.Token);
                             _queryWorkers.Add(queryWorker);
@@ -113,13 +112,6 @@ namespace borkedLabs.CrestScribe
                     {
                         character.QueryQueue = _queryQueue;
                         _queryQueue.Add(character);
-
-                        i++;
-                        if (i > 20)
-                        {
-                            i = 0;
-                            Thread.Sleep(1000);
-                        }
                     }
 
                     if (characters.Count > 0)

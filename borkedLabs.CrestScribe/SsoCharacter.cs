@@ -233,16 +233,25 @@ namespace borkedLabs.CrestScribe
                 return;
             }
 
-            var session = Session.Find(CharacterId, UserId);
 
-            if(session == null || (!AlwaysTrackLocation && session.UpdatedAt.AddMinutes(1) < DateTime.UtcNow ) )
+            Session session = null;
+
+            if(!AlwaysTrackLocation)
+            {
+                session = Session.Find(UserId, CharacterId);
+            }
+            else
+            {
+                session = Session.Find(UserId);
+            }
+
+            if(session == null || session.UpdatedAt.AddMinutes(1) < DateTime.UtcNow )
             {
                 //not an active session, dont poll as often but also dont continue
                 _pollTimer = new Timer(new TimerCallback(_pollTimerCallback), null, 20*1000, Timeout.Infinite);
 
                 return;
             }
-
             if (TokenExpiration < DateTime.UtcNow)
             {
                 bool changed = await RefreshAccess();
