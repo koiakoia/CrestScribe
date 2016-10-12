@@ -135,6 +135,7 @@ namespace borkedLabs.CrestScribe
                             }
                         }
 
+                        _queryWorkers.Clear();
                         createdCutoff = DateTime.SpecifyKind(DateTime.MinValue, DateTimeKind.Utc);
 
                         _queryQueue.Dispose();

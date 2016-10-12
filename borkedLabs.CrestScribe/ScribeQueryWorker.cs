@@ -56,6 +56,10 @@ namespace borkedLabs.CrestScribe
                                 break;
                         }
                     }
+                    catch(System.OperationCanceledException)
+                    {
+                        break;
+                    }
                 }
             }
         }
