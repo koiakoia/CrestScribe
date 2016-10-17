@@ -95,6 +95,8 @@ namespace borkedLabs.CrestScribe
         public bool Valid { get; set; }
         #endregion
 
+        private UInt64? currentSystemId;
+
         private DynamicCrest _crest;
         private Expando _characterCrest;
 
@@ -193,12 +195,32 @@ namespace borkedLabs.CrestScribe
                     };
 
                     loc.Save();
+
+
+                    if(LastLocationQueryAt > DateTime.UtcNow.AddSeconds(-20))
+                    {
+                        if (currentSystemId.HasValue && currentSystemId.Value != locationId)
+                        {
+                            var lochistory = new CharacterLocationHistory()
+                            {
+                                CharacterId = CharacterId,
+                                PreviousSystemId = currentSystemId.Value,
+                                CurrentSystemId = locationId
+                            };
+
+                            lochistory.Create();
+                        }
+                    }
+
+                    currentSystemId = locationId;
+                    
+
                     return true;
                 }
 
                 return false;
             }
-            catch
+            catch(Exception e)
             {
                 return false;
             }

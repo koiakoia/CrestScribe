@@ -92,6 +92,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CharacterLocationHistory.cs" />
     <Compile Include="CharacterLocation.cs" />
     <Compile Include="Database.cs" />
     <Compile Include="PeriodicTask.cs" />
