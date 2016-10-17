@@ -34,34 +34,36 @@ namespace borkedLabs.CrestScribe
         {
             while (!_cancelToken.IsCancellationRequested)
             {
-                var character = _queryQueue.Take(_cancelToken);
-
-                if(character != null)
+                try
                 {
-                    try
+                    var character = _queryQueue.Take(_cancelToken);
+
+                    if(character != null)
                     {
                         var t = Task.Run(character.Poll,_cancelToken);
                         t.Wait(_cancelToken);
                     }
-                    catch (MySql.Data.MySqlClient.MySqlException ex)
+                }
+                catch (MySql.Data.MySqlClient.MySqlException ex)
+                {
+                    switch (ex.Number)
                     {
-                        switch (ex.Number)
-                        {
-                            case 0: //no connect
-                            case (int)MySql.Data.MySqlClient.MySqlErrorCode.UnableToConnectToHost:
-                                //catch these silently, the main service thread will do magic to cancel out everything
-                                break;
-                            default:
-                                throw ex;
-                                break;
-                        }
+                        case 0: //no connect
+                        case (int)MySql.Data.MySqlClient.MySqlErrorCode.UnableToConnectToHost:
+                            //catch these silently, the main service thread will do magic to cancel out everything
+                            break;
+                        default:
+                            throw ex;
                     }
-                    catch(System.OperationCanceledException)
-                    {
-                        break;
-                    }
+                }
+                catch (System.OperationCanceledException)
+                {
+                    break;
                 }
             }
         }
+
+
+
     }
 }
