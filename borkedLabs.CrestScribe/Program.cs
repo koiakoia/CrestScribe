@@ -3,6 +3,7 @@ using System.Collections;
 using System.ServiceProcess;
 using System.Threading;
 using System.Configuration.Install;
+using System.IO;
 
 namespace borkedLabs.CrestScribe
 {
@@ -15,7 +16,9 @@ namespace borkedLabs.CrestScribe
         /// </summary>
         static void Main(string[] args)
         {
-            ScribeSettings.Load(System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "settings.json"));
+            Directory.SetCurrentDirectory(AppDomain.CurrentDomain.BaseDirectory);
+
+            ScribeSettings.Load("settings.json");
 
             //Increase the connection limit which is usually per host in .NET
             System.Net.ServicePointManager.DefaultConnectionLimit = ScribeSettings.Settings.Worker.Total * 2;

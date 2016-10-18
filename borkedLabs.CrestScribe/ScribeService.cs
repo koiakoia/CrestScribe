@@ -9,18 +9,21 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Concurrent;
-
+using NLog;
 
 namespace borkedLabs.CrestScribe
 {
     public partial class ScribeService : ServiceBase
     {
+        private static Logger logger = LogManager.GetCurrentClassLogger();
         private Thread _thread = null;
         CancellationTokenSource _cts = new CancellationTokenSource();
         CancellationTokenSource _workerCts = new CancellationTokenSource();
 
 
         private List<ScribeQueryWorker> _queryWorkers = new List<ScribeQueryWorker>();
+
+        private ConcurrentDictionary<UInt64, SsoCharacter> Characters = new ConcurrentDictionary<ulong, SsoCharacter>();
 
 
         public ScribeService()
@@ -68,6 +71,7 @@ namespace borkedLabs.CrestScribe
         private void workThread()
         {
             DateTime createdCutoff = DateTime.SpecifyKind(DateTime.MinValue, DateTimeKind.Utc);
+            logger.Info("Starting service");
 
             while (!_cts.Token.IsCancellationRequested)
             {
@@ -97,6 +101,7 @@ namespace borkedLabs.CrestScribe
                     //create them if they don't exist!
                     if (_queryWorkers.Count == 0)
                     {
+                        logger.Info("Database is up, restarting threads");
                         //reset the token as it may be triggered
                         _workerCts = new CancellationTokenSource();
                         for (int i = 0; i < ScribeSettings.Settings.Worker.Total; i++)
@@ -108,28 +113,39 @@ namespace borkedLabs.CrestScribe
                         }
                     }
 
+                    logger.Info("Adding {0} characters to query queue", characters.Count());
                     foreach (var character in characters)
                     {
                         character.QueryQueue = _queryQueue;
-                        _queryQueue.Add(character);
+                        if (Characters.TryAdd(character.CharacterId, character))
+                        {
+                            _queryQueue.Add(character);
+                        }
+                        else
+                        {
+                            //this shouldnt have happened
+                            logger.Error("Exception attempting to add duplicate character {0} to dictionary", character.CharacterId);
+                        }
                     }
 
                     if (characters.Count > 0)
                     {
                         createdCutoff = DateTime.UtcNow;
                     }
-
                 }
                 else
                 {
                     //db is down, we should close the workers
                     if (_queryWorkers.Count != 0)
                     {
+                        logger.Error("Database is down, killing workers");
                         _workerCts.Cancel();
                         foreach (var w in _queryWorkers)
                         {
-                            if (!w.Thread.Join(500))
+                            if (!w.Thread.Join(1500))
                             {
+                                logger.Error("Thread failed to join within alloted time");
+
                                 //nuke the thread, really nothing else we can do anyway
                                 w.Thread.Abort();
                             }
@@ -146,6 +162,8 @@ namespace borkedLabs.CrestScribe
                 _cts.Token.WaitHandle.WaitOne(60000);
             }
 
+            logger.Info("Shutting down service");
+
             _workerCts.Cancel();
             foreach (var w in _queryWorkers)
             {
@@ -155,6 +173,8 @@ namespace borkedLabs.CrestScribe
                     w.Thread.Abort();
                 }
             }
+
+            _queryWorkers.Clear();
         }
     }
 }
