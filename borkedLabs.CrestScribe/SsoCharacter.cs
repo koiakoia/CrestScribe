@@ -97,19 +97,36 @@ namespace borkedLabs.CrestScribe
         #endregion
 
         private static Logger logger = LogManager.GetCurrentClassLogger();
+
+        /// <summary>
+        /// Current system id after succesful processing of location, 
+        /// otherwise null until it can get a location
+        /// </summary>
         private UInt64? currentSystemId;
 
         private DynamicCrest _crest;
         private Expando _characterCrest;
 
+        /// <summary>
+        /// Last time we attempted a location query, successful or not
+        /// </summary>
         public DateTime LastLocationQueryAt { get; set; }
+
+        /// <summary>
+        /// Last time we got a succesful location result. 
+        /// Because it can fail either due to CCP, client logging off, or us.
+        /// </summary>
         public DateTime LastSuccessfulLocationQueryAt { get; set; }
-        public TimeSpan PollInterval { get; set; }
+
+        /// <summary>
+        /// Thread-pool timer that fires to add us back onto the query queue
+        /// </summary>
         private Timer _pollTimer;
-        public BlockingCollection<SsoCharacter> QueryQueue
-        {
-            get;set;
-        }
+
+        /// <summary>
+        /// Reference to query queue that we keep adding ourselves to upon the polltimer firing
+        /// </summary>
+        public BlockingCollection<SsoCharacter> QueryQueue { get;set; }
 
         public SsoCharacter()
         {
@@ -129,6 +146,7 @@ namespace borkedLabs.CrestScribe
 
             QueryQueue.Add(this);
         }
+
         /// <summary>
         /// Attempts to refresh the tokens. Failure of token refresh (bad tokens) may set the valid flag to false.
         /// </summary>
