@@ -10,6 +10,7 @@ using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Concurrent;
+using NLog;
 
 namespace borkedLabs.CrestScribe
 {
@@ -95,12 +96,14 @@ namespace borkedLabs.CrestScribe
         public bool Valid { get; set; }
         #endregion
 
+        private static Logger logger = LogManager.GetCurrentClassLogger();
         private UInt64? currentSystemId;
 
         private DynamicCrest _crest;
         private Expando _characterCrest;
 
         public DateTime LastLocationQueryAt { get; set; }
+        public DateTime LastSuccessfulLocationQueryAt { get; set; }
         public TimeSpan PollInterval { get; set; }
         private Timer _pollTimer;
         public BlockingCollection<SsoCharacter> QueryQueue
@@ -115,6 +118,7 @@ namespace borkedLabs.CrestScribe
             _crest.RefreshToken = RefreshToken;
             _crest.EnableAutomaticTokenRefresh = false;
             LastLocationQueryAt = DateTime.MinValue;
+            LastSuccessfulLocationQueryAt = DateTime.MinValue;
 
             _pollTimer = null;
         }
@@ -196,8 +200,7 @@ namespace borkedLabs.CrestScribe
 
                     loc.Save();
 
-
-                    if(LastLocationQueryAt > DateTime.UtcNow.AddSeconds(-20))
+                    if (LastSuccessfulLocationQueryAt > DateTime.UtcNow.AddSeconds(ScribeSettings.Settings.CrestLocation.JumpValidAgeSeconds))
                     {
                         if (currentSystemId.HasValue && currentSystemId.Value != locationId)
                         {
@@ -213,7 +216,9 @@ namespace borkedLabs.CrestScribe
                     }
 
                     currentSystemId = locationId;
-                    
+
+                    LastSuccessfulLocationQueryAt = DateTime.UtcNow;
+
 
                     return true;
                 }

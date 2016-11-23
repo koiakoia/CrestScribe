@@ -11,7 +11,8 @@
     "schema": "crest"
   },
   "crest_location": {
-    "interval": 15
+    "interval": 15,
+    "jump_valid_age": 20
   },
   "worker": {
     "total": 10
