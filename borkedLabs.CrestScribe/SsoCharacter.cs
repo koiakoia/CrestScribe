@@ -14,6 +14,14 @@ using NLog;
 
 namespace borkedLabs.CrestScribe
 {
+    public enum SsoCharacterState
+    {
+        Init,
+        NoActiveSessionWait,
+        WaitingToPoll,
+        ErrorSlowdown
+    }
+
     public class SsoCharacter
     {
         #region SQLFields
@@ -123,10 +131,13 @@ namespace borkedLabs.CrestScribe
         /// </summary>
         private Timer _pollTimer;
 
+        private object _pollTimerLock = new object();
         /// <summary>
         /// Reference to query queue that we keep adding ourselves to upon the polltimer firing
         /// </summary>
         public BlockingCollection<SsoCharacter> QueryQueue { get;set; }
+
+        public SsoCharacterState State { get; private set; } = SsoCharacterState.Init;
 
         public SsoCharacter()
         {
@@ -142,9 +153,12 @@ namespace borkedLabs.CrestScribe
         
         private void _pollTimerCallback(object state)
         {
-            _pollTimer.Dispose();
+            lock(_pollTimerLock)
+            {
+                _pollTimer.Dispose();
 
-            QueryQueue.Add(this);
+                QueryQueue.Add(this);
+            }
         }
 
         /// <summary>
@@ -276,6 +290,18 @@ namespace borkedLabs.CrestScribe
         {
             return Valid && (LastLocationQueryAt < DateTime.UtcNow.AddSeconds(ScribeSettings.Settings.CrestLocation.Interval));
         }
+
+        public void SessionWaitFastFoward()
+        {
+            if(State == SsoCharacterState.NoActiveSessionWait)
+            {
+                lock(_pollTimerLock)
+                {
+                    _pollTimer.Dispose();
+                    QueryQueue.Add(this);
+                }
+            }
+        }
       
         public async Task Poll()
         {
@@ -298,8 +324,12 @@ namespace borkedLabs.CrestScribe
 
             if(session == null || session.UpdatedAt.AddMinutes(1) < DateTime.UtcNow )
             {
+                State = SsoCharacterState.NoActiveSessionWait;
                 //not an active session, dont poll as often but also dont continue
-                _pollTimer = new Timer(new TimerCallback(_pollTimerCallback), null, 20*1000, Timeout.Infinite);
+                lock (_pollTimerLock)
+                {
+                    _pollTimer = new Timer(new TimerCallback(_pollTimerCallback), null, 20 * 1000, Timeout.Infinite);
+                }
 
                 return;
             }
@@ -335,14 +365,22 @@ namespace borkedLabs.CrestScribe
             {
                 if(!await GetLocation())
                 {
+                    State = SsoCharacterState.ErrorSlowdown;
                     //not an active char or CREST is having issues, slow down
-                    _pollTimer = new Timer(new TimerCallback(_pollTimerCallback), null, 20 * 1000, Timeout.Infinite);
+                    lock (_pollTimerLock)
+                    {
+                        _pollTimer = new Timer(new TimerCallback(_pollTimerCallback), null, 20 * 1000, Timeout.Infinite);
+                    }
 
                     return;
                 }
             }
 
-            _pollTimer = new Timer(new TimerCallback(_pollTimerCallback), null, ScribeSettings.Settings.CrestLocation.Interval * 1000, Timeout.Infinite);
+            State = SsoCharacterState.WaitingToPoll;
+            lock (_pollTimerLock)
+            {
+                _pollTimer = new Timer(new TimerCallback(_pollTimerCallback), null, ScribeSettings.Settings.CrestLocation.Interval * 1000, Timeout.Infinite);
+            }
         }
     }
 }

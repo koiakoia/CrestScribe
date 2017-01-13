@@ -9,11 +9,13 @@ using System.Diagnostics;
 using System.Threading;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json;
+using NLog;
 
 namespace borkedLabs.CrestScribe
 {
     public static class CommandBus
     {
+        private static Logger logger = LogManager.GetCurrentClassLogger();
         private static Thread _thread = null;
         private static NetMQPoller _poller = null;
 
@@ -54,7 +56,11 @@ namespace borkedLabs.CrestScribe
 
                     if(charId != 0)
                     {
-
+                        var character = ScribeCoreWorker.GetCharacter(charId);
+                        if(character != null)
+                        {
+                            character.SessionWaitFastFoward();
+                        }
                     }
                     break;
             }
@@ -77,9 +83,9 @@ namespace borkedLabs.CrestScribe
                         var msgObj = JsonConvert.DeserializeObject<CommandBusMessage>(msg);
                         _handleCommandMessage(msgObj);
                     }
-                    catch
+                    catch(Exception e)
                     {
-
+                        logger.Error(e, "Exception handling command bus message");
                     }
 
                 };
