@@ -17,6 +17,9 @@ namespace borkedLabs.CrestScribe.Settings
         [JsonProperty("worker")]
         public WorkerSettings Worker { get; set; }
 
+        [JsonProperty("command_bus")]
+        public CommandBusSettings CommandBus { get; set; }
+
         public static SettingsRoot Load(string file)
         {
             using (StreamReader f = File.OpenText(file))

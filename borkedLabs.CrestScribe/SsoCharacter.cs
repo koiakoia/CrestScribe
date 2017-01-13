@@ -203,11 +203,17 @@ namespace borkedLabs.CrestScribe
 
             try
             {
-                var location = await _characterCrest.GetAsync(r => r.location);
+                Expando location = null;
+                try
+                {
+                    location = await _characterCrest.GetAsync(r => r.location);
+                }
+                catch { }
 
                 LastLocationQueryAt = DateTime.UtcNow;
 
-                if (location.Properties.ContainsKey("solarSystem"))
+                if ( location != null &&
+                        location.Properties.ContainsKey("solarSystem"))
                 {
                     ulong locationId = (ulong)location["solarSystem"].id;
                     var loc = new CharacterLocation()

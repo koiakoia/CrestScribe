@@ -16,5 +16,9 @@
   },
   "worker": {
     "total": 10
+  },
+  "command_bus": {
+    "host": "localhost",
+    "port": "5558"
   }
 }

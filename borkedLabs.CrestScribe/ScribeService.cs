@@ -42,6 +42,8 @@ namespace borkedLabs.CrestScribe
             _thread.Name = "scribe service thread";
             _thread.IsBackground = true;
             _thread.Start();
+
+            CommandBus.Start();
         }
 
         protected override void OnStart(string[] args)
@@ -56,6 +58,8 @@ namespace borkedLabs.CrestScribe
 
         public void StopWork()
         {
+            CommandBus.Stop();
+
             _cts.Cancel();
             if (!_thread.Join(10000))
             {
