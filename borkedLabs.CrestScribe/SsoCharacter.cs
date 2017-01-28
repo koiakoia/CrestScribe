@@ -62,6 +62,13 @@ namespace borkedLabs.CrestScribe
 
         public bool AlwaysTrackLocation { get; set; }
 
+        public bool ScopeCharacterLocationRead { get; set; }
+        public bool ScopeCharacterNavigationWrite { get; set; }
+        public bool ScopeEsiLocationReadLocation { get; set; }
+        public bool ScopeEsiLocationReadShipType { get; set; }
+        public bool ScopeEsiUiWriteWaypoint { get; set; }
+        public bool ScopeEsiUiOpenWindow { get; set; }
+
         private DateTime _tokenExpiration;
         public DateTime TokenExpiration
         {
@@ -125,6 +132,8 @@ namespace borkedLabs.CrestScribe
         /// Because it can fail either due to CCP, client logging off, or us.
         /// </summary>
         public DateTime LastSuccessfulLocationQueryAt { get; set; }
+
+
 
         /// <summary>
         /// Thread-pool timer that fires to add us back onto the query queue

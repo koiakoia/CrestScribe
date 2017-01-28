@@ -22,6 +22,12 @@ namespace borkedLabs.CrestScribe
                                     access_token_expiration TokenExpiration, created_at CreatedAt, 
                                     updated_at UpdatedAt, valid Valid,
                                     always_track_location AlwaysTrackLocation
+                                    scope_character_location_read ScopeCharacterLocationRead
+                                    scope_character_navigation_write ScopeCharacterNavigationWrite
+                                    scope_esi_location_read_location ScopeEsiLocationReadLocation
+                                    scope_esi_location_read_ship_type ScopeEsiLocationReadShipType
+                                    scope_esi_ui_write_waypoint ScopeEsiUiWriteWaypoint
+                                    scope_esi_ui_open_window ScopeEsiUiOpenWindow
                             FROM user_ssocharacter WHERE created_at > @createdAtCutoff";
                 return sql.Query<SsoCharacter>(q, new { createdAtCutoff = createdAtCutoff } ).ToList();
             }
