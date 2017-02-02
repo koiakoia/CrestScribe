@@ -134,6 +134,7 @@ namespace borkedLabs.CrestScribe
         public DateTime LastSuccessfulLocationQueryAt { get; set; }
 
 
+        public UInt64 CurrentShipId { get; set; } = 0;
 
         /// <summary>
         /// Thread-pool timer that fires to add us back onto the query queue
@@ -217,7 +218,7 @@ namespace borkedLabs.CrestScribe
             return false;
         }
 
-        public async Task<bool> GetLocation()
+        public async Task<bool> GetLocationCrest()
         {
             if(_characterCrest == null)
             {
@@ -266,13 +267,85 @@ namespace borkedLabs.CrestScribe
 
                     LastSuccessfulLocationQueryAt = DateTime.UtcNow;
 
-
                     return true;
                 }
 
                 return false;
             }
             catch(Exception e)
+            {
+                return false;
+            }
+        }
+
+
+        public async Task<bool> GetLocationESI()
+        {
+            try
+            {
+
+                // Configure OAuth2 access token for authorization: evesso
+                ESI.Client.Configuration.Default.AccessToken = _crest.AccessToken;
+                var apiInstance = new ESI.Api.LocationApi();
+
+                ESI.Model.GetCharactersCharacterIdLocationOk locationResponse = null;
+                ESI.Model.GetCharactersCharacterIdShipOk shipResponse = null;
+                try
+                {
+                    // Get character location
+                    locationResponse = await apiInstance.GetCharactersCharacterIdLocationAsync((int)CharacterId, "tranquility");
+                    shipResponse = await apiInstance.GetCharactersCharacterIdShipAsync((int)CharacterId, "tranquility");
+                }
+                catch
+                {
+                }
+
+                LastLocationQueryAt = DateTime.UtcNow;
+
+                if (shipResponse != null)
+                {
+                    CurrentShipId = (UInt64)shipResponse.ShipTypeId;
+                }
+
+                if (locationResponse != null )
+                {
+                    ulong locationId = (ulong)locationResponse.SolarSystemId;
+                    var loc = new CharacterLocation()
+                    {
+                        CharacterId = CharacterId,
+                        SystemId = locationId,
+                        ShipId = CurrentShipId
+                    };
+
+                    loc.Save();
+
+                    if (LastSuccessfulLocationQueryAt > DateTime.UtcNow.AddSeconds(ScribeSettings.Settings.CrestLocation.JumpValidAgeSeconds))
+                    {
+                        if (currentSystemId.HasValue && currentSystemId.Value != locationId)
+                        {
+                            var lochistory = new CharacterLocationHistory()
+                            {
+                                CharacterId = CharacterId,
+                                PreviousSystemId = currentSystemId.Value,
+                                CurrentSystemId = locationId,
+                                ShipId = CurrentShipId
+                            };
+
+                            lochistory.Create();
+                        }
+                    }
+
+                    currentSystemId = locationId;
+
+                    LastSuccessfulLocationQueryAt = DateTime.UtcNow;
+
+
+                    return true;
+                }
+
+                return false;
+            }
+            catch (Exception e)
             {
                 return false;
             }
@@ -357,31 +430,53 @@ namespace borkedLabs.CrestScribe
             }
 
             // CREST may not return anything when the server is down :/
-            if(_characterCrest == null)
+            if(ScopeEsiLocationReadLocation)
             {
-                try
+                if ( ShouldGetLocation())
                 {
-                    _characterCrest = await (await (await _crest.GetAsync(_crest.Host)).GetAsync(r => r.decode)).GetAsync(r => r.character);
-                }
-                catch
-                {
-                    _characterCrest = null;
-                }
-            }
-
-            if ( _characterCrest != null &&
-                ShouldGetLocation())
-            {
-                if(!await GetLocation())
-                {
-                    State = SsoCharacterState.ErrorSlowdown;
-                    //not an active char or CREST is having issues, slow down
-                    lock (_pollTimerLock)
+                    if (!await GetLocationESI())
                     {
-                        _pollTimer = new Timer(new TimerCallback(_pollTimerCallback), null, 20 * 1000, Timeout.Infinite);
+                        State = SsoCharacterState.ErrorSlowdown;
+                        //not an active char or CREST is having issues, slow down
+                        lock (_pollTimerLock)
+                        {
+                            _pollTimer = new Timer(new TimerCallback(_pollTimerCallback), null, 20 * 1000, Timeout.Infinite);
+                        }
+
+                        return;
                     }
 
-                    return;
+                }
+            }
+            else if(ScopeCharacterLocationRead)
+            {
+                if (_characterCrest == null)
+                {
+                    try
+                    {
+                        _characterCrest = await (await (await _crest.GetAsync(_crest.Host)).GetAsync(r => r.decode)).GetAsync(r => r.character);
+                    }
+                    catch
+                    {
+                        _characterCrest = null;
+                    }
+                }
+
+                if (_characterCrest != null &&
+                    ShouldGetLocation())
+                {
+                    if (!await GetLocationCrest())
+                    {
+                        State = SsoCharacterState.ErrorSlowdown;
+                        //not an active char or CREST is having issues, slow down
+                        lock (_pollTimerLock)
+                        {
+                            _pollTimer = new Timer(new TimerCallback(_pollTimerCallback), null, 20 * 1000, Timeout.Infinite);
+                        }
+
+                        return;
+                    }
+
                 }
             }
 

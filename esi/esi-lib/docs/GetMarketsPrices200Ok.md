@@ -1,0 +1,11 @@
+# ESI.Model.GetMarketsPrices200Ok
+## Properties
+
+Name | Type | Description | Notes
+------------ | ------------- | ------------- | -------------
+**AdjustedPrice** | **float?** | adjusted_price number | [optional] 
+**AveragePrice** | **float?** | average_price number | [optional] 
+**TypeId** | **int?** | type_id integer | 
+
+[[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
+
