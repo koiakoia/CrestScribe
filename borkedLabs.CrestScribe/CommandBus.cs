@@ -52,14 +52,30 @@ namespace borkedLabs.CrestScribe
             switch(msg.Type)
             {
                 case "unfreeze_character":
-                    UInt64 charId = (UInt64)msg.Parameters["character_id"];
-
-                    if(charId != 0)
                     {
-                        var character = ScribeCoreWorker.GetCharacter(charId);
-                        if(character != null)
+                        string charHash = (string)msg.Parameters["character_owner_hash"];
+
+                        if (charHash != "")
                         {
-                            character.SessionWaitFastFoward();
+                            var character = ScribeCoreWorker.GetCharacter(charHash);
+                            if (character != null)
+                            {
+                                character.SessionWaitFastFoward();
+                            }
+                        }
+                    }
+                    break;
+                case "update_sso_character":
+                    {
+                        string charHash = (string)msg.Parameters["character_owner_hash"];
+
+                        if (charHash != "")
+                        {
+                            var character = ScribeCoreWorker.GetCharacter(charHash);
+                            if (character != null)
+                            {
+                                character.SessionWaitFastFoward();
+                            }
                         }
                     }
                     break;

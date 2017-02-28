@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using borkedLabs.CrestScribe.Database;
 
 namespace borkedLabs.CrestScribe
 {
@@ -18,7 +19,7 @@ namespace borkedLabs.CrestScribe
 
         private static List<ScribeQueryWorker> _queryWorkers = new List<ScribeQueryWorker>();
 
-        private static ConcurrentDictionary<UInt64, SsoCharacter> Characters = new ConcurrentDictionary<ulong, SsoCharacter>();
+        private static ConcurrentDictionary<string, SsoCharacter> Characters = new ConcurrentDictionary<string, SsoCharacter>();
         private static Thread _thread = null;
 
         public static void StartWork()
@@ -45,14 +46,14 @@ namespace borkedLabs.CrestScribe
             }
         }
 
-        public static SsoCharacter GetCharacter(UInt64 charId)
+        public static SsoCharacter GetCharacter(string charOwnerHash)
         {
             SsoCharacter character = null;
             lock (Characters)
             {
-                if(Characters.ContainsKey(charId))
+                if(Characters.ContainsKey(charOwnerHash))
                 {
-                    character = Characters[charId];
+                    character = Characters[charOwnerHash];
                 }
             }
             return character;
@@ -72,11 +73,10 @@ namespace borkedLabs.CrestScribe
             {
                 bool dbAvaliable = true;
                 List<SsoCharacter> characters = null;
-                Database.GetConnection();
 
                 try
                 {
-                    characters = Database.GetSSOCharacters(createdCutoff);
+                    characters = SqlContext.GetSSOCharacters(createdCutoff);
                 }
                 catch (MySql.Data.MySqlClient.MySqlException ex)
                 {
@@ -115,7 +115,7 @@ namespace borkedLabs.CrestScribe
                         foreach (var character in characters)
                         {
                             character.QueryQueue = _queryQueue;
-                            if (Characters.TryAdd(character.CharacterId, character))
+                            if (Characters.TryAdd(character.CharacterOwnerHash, character))
                             {
                                 _queryQueue.Add(character);
                             }

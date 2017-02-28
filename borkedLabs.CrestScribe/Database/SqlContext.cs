@@ -6,9 +6,9 @@ using System.Text;
 using System.Threading.Tasks;
 using Dapper;
 
-namespace borkedLabs.CrestScribe
+namespace borkedLabs.CrestScribe.Database
 {
-    class Database
+    class SqlContext
     {
         public static List<SsoCharacter> GetSSOCharacters(DateTime createdAtCutoff)
         {

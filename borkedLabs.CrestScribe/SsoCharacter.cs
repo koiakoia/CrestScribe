@@ -11,6 +11,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Concurrent;
 using NLog;
+using borkedLabs.CrestScribe.Database;
 
 namespace borkedLabs.CrestScribe
 {
@@ -170,6 +171,7 @@ namespace borkedLabs.CrestScribe
                 QueryQueue.Add(this);
             }
         }
+
 
         /// <summary>
         /// Attempts to refresh the tokens. Failure of token refresh (bad tokens) may set the valid flag to false.
@@ -353,7 +355,7 @@ namespace borkedLabs.CrestScribe
 
         public bool Save()
         {
-            using (MySqlConnection sql = Database.GetConnection())
+            using (MySqlConnection sql = SqlContext.GetConnection())
             {
                 UpdatedAt = DateTime.UtcNow;
                 string q = @"UPDATE user_ssocharacter SET refresh_token = @RefreshToken, 

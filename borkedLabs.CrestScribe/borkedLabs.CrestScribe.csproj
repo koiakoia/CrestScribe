@@ -105,10 +105,10 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="CharacterLocationHistory.cs" />
-    <Compile Include="CharacterLocation.cs" />
+    <Compile Include="Database\CharacterLocationHistory.cs" />
+    <Compile Include="Database\CharacterLocation.cs" />
     <Compile Include="CommandBus.cs" />
-    <Compile Include="Database.cs" />
+    <Compile Include="Database\SqlContext.cs" />
     <Compile Include="PeriodicTask.cs" />
     <Compile Include="ProjectInstaller.cs">
       <SubType>Component</SubType>
@@ -160,6 +160,7 @@
       <Name>ESI</Name>
     </ProjectReference>
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

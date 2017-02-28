@@ -2,7 +2,7 @@
 using MySql.Data.MySqlClient;
 using Dapper;
 
-namespace borkedLabs.CrestScribe
+namespace borkedLabs.CrestScribe.Database
 {
     public class CharacterLocationHistory
     {
@@ -26,7 +26,7 @@ namespace borkedLabs.CrestScribe
 
         public bool Create()
         {
-            using (MySqlConnection db = Database.GetConnection())
+            using (MySqlConnection db = SqlContext.GetConnection())
             {
                 ChangedAt = DateTime.UtcNow;
 

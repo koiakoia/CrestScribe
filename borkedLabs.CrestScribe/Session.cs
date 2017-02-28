@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Dapper;
 using MySql.Data.MySqlClient;
+using borkedLabs.CrestScribe.Database;
 
 namespace borkedLabs.CrestScribe
 {
@@ -28,7 +29,7 @@ namespace borkedLabs.CrestScribe
 
         public static Session Find(uint userId)
         {
-            using (MySqlConnection sql = Database.GetConnection())
+            using (MySqlConnection sql = SqlContext.GetConnection())
             {
                 sql.Open();
 
@@ -44,7 +45,7 @@ namespace borkedLabs.CrestScribe
 
         public static Session Find(uint userId, UInt64 characterId)
         {
-            using (MySqlConnection sql = Database.GetConnection())
+            using (MySqlConnection sql = SqlContext.GetConnection())
             {
                 sql.Open();
 
