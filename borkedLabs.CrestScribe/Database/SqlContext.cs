@@ -10,7 +10,7 @@ namespace borkedLabs.CrestScribe.Database
 {
     class SqlContext
     {
-        public static List<SsoCharacter> GetSSOCharacters(DateTime createdAtCutoff)
+        public static List<UserSsoCharacter> GetSSOCharacters(DateTime createdAtCutoff)
         {
             var result = new List<SsoCharacter>();
             using (MySqlConnection sql = new MySqlConnection(ScribeSettings.Settings.Database.ConnectionString))
@@ -29,7 +29,7 @@ namespace borkedLabs.CrestScribe.Database
                                     scope_esi_ui_write_waypoint ScopeEsiUiWriteWaypoint,
                                     scope_esi_ui_open_window ScopeEsiUiOpenWindow
                             FROM user_ssocharacter WHERE created_at > @createdAtCutoff";
-                return sql.Query<SsoCharacter>(q, new { createdAtCutoff = createdAtCutoff } ).ToList();
+                return sql.Query<UserSsoCharacter>(q, new { createdAtCutoff = createdAtCutoff } ).ToList();
             }
         }
 

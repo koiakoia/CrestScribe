@@ -109,6 +109,7 @@
     <Compile Include="Database\CharacterLocation.cs" />
     <Compile Include="CommandBus.cs" />
     <Compile Include="Database\SqlContext.cs" />
+    <Compile Include="Database\SsoCharacter.cs" />
     <Compile Include="PeriodicTask.cs" />
     <Compile Include="ProjectInstaller.cs">
       <SubType>Component</SubType>

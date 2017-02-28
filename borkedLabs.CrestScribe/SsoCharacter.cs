@@ -25,92 +25,7 @@ namespace borkedLabs.CrestScribe
 
     public class SsoCharacter
     {
-        #region SQLFields
-
-        private string _accessToken;
-        public string AccessToken
-        {
-            get
-            {
-                return _accessToken;
-            }
-            set
-            {
-                _accessToken = value;
-                _crest.AccessToken = _accessToken;
-            }
-        }
-
-        private string _refreshToken { get; set; }
-        public string RefreshToken
-        {
-            get
-            {
-                return _refreshToken;
-            }
-            set
-            {
-                _refreshToken = value;
-                _crest.RefreshToken = _refreshToken;
-            }
-        }
-
-        public uint UserId { get; set; }
-
-        public string CharacterOwnerHash { get; set; }
-
-        public UInt64 CharacterId { get; set; }
-
-        public bool AlwaysTrackLocation { get; set; }
-
-        public bool ScopeCharacterLocationRead { get; set; }
-        public bool ScopeCharacterNavigationWrite { get; set; }
-        public bool ScopeEsiLocationReadLocation { get; set; }
-        public bool ScopeEsiLocationReadShipType { get; set; }
-        public bool ScopeEsiUiWriteWaypoint { get; set; }
-        public bool ScopeEsiUiOpenWindow { get; set; }
-
-        private DateTime _tokenExpiration;
-        public DateTime TokenExpiration
-        {
-            get
-            {
-                return _tokenExpiration;
-            }
-            set
-            {
-                _tokenExpiration = DateTime.SpecifyKind(value, DateTimeKind.Utc);
-            }
-        }
-
-        private DateTime _createdAt;
-        public DateTime CreatedAt
-        {
-            get
-            {
-                return _createdAt;
-            }
-            set
-            {
-                _createdAt = DateTime.SpecifyKind(value, DateTimeKind.Utc);
-            }
-        }
-
-        private DateTime _updatedAt;
-        public DateTime UpdatedAt
-        {
-            get
-            {
-                return _updatedAt;
-            }
-            set
-            {
-                _updatedAt = DateTime.SpecifyKind(value, DateTimeKind.Utc);
-            }
-        }
-
-        public bool Valid { get; set; }
-        #endregion
+        private UserSsoCharacter UserSsoCharacter;
 
         private static Logger logger = LogManager.GetCurrentClassLogger();
 
@@ -150,11 +65,12 @@ namespace borkedLabs.CrestScribe
 
         public SsoCharacterState State { get; private set; } = SsoCharacterState.Init;
 
-        public SsoCharacter()
+        public SsoCharacter(UserSsoCharacter character)
         {
-            _crest = new DynamicCrest(AccessToken);
+            UserSsoCharacter = character;
+            _crest = new DynamicCrest(UserSsoCharacter.AccessToken);
             _crest.EncodedKey = ScribeSettings.Settings.Sso.EncodedKey;
-            _crest.RefreshToken = RefreshToken;
+            _crest.RefreshToken = UserSsoCharacter.RefreshToken;
             _crest.EnableAutomaticTokenRefresh = false;
             LastLocationQueryAt = DateTime.MinValue;
             LastSuccessfulLocationQueryAt = DateTime.MinValue;
@@ -185,9 +101,9 @@ namespace borkedLabs.CrestScribe
 
                 if (response.TokenType == "Bearer")
                 {
-                    AccessToken = response.AccessToken;
-                    RefreshToken = response.RefreshToken;
-                    TokenExpiration = DateTime.UtcNow.AddSeconds(response.ExpiresIn);
+                    UserSsoCharacter.AccessToken = response.AccessToken;
+                    UserSsoCharacter.RefreshToken = response.RefreshToken;
+                    UserSsoCharacter.TokenExpiration = DateTime.UtcNow.AddSeconds(response.ExpiresIn);
 
                     return true;
                 }
@@ -205,7 +121,7 @@ namespace borkedLabs.CrestScribe
                     if(webResponse.StatusCode == HttpStatusCode.BadRequest ||
                         webResponse.StatusCode == HttpStatusCode.Unauthorized)
                     {
-                        Valid = false;
+                        UserSsoCharacter.Valid = false;
                         return true;
                     }
                 }
@@ -244,7 +160,7 @@ namespace borkedLabs.CrestScribe
                     ulong locationId = (ulong)location["solarSystem"].id;
                     var loc = new CharacterLocation()
                     {
-                        CharacterId = CharacterId,
+                        CharacterId = UserSsoCharacter.CharacterId,
                         SystemId = locationId
                     };
 
@@ -256,7 +172,7 @@ namespace borkedLabs.CrestScribe
                         {
                             var lochistory = new CharacterLocationHistory()
                             {
-                                CharacterId = CharacterId,
+                                CharacterId = UserSsoCharacter.CharacterId,
                                 PreviousSystemId = currentSystemId.Value,
                                 CurrentSystemId = locationId
                             };
@@ -295,8 +211,8 @@ namespace borkedLabs.CrestScribe
                 try
                 {
                     // Get character location
-                    locationResponse = await apiInstance.GetCharactersCharacterIdLocationAsync((int)CharacterId, "tranquility");
-                    shipResponse = await apiInstance.GetCharactersCharacterIdShipAsync((int)CharacterId, "tranquility");
+                    locationResponse = await apiInstance.GetCharactersCharacterIdLocationAsync((int)UserSsoCharacter.CharacterId, "tranquility");
+                    shipResponse = await apiInstance.GetCharactersCharacterIdShipAsync((int)UserSsoCharacter.CharacterId, "tranquility");
                 }
                 catch
                 {
@@ -314,7 +230,7 @@ namespace borkedLabs.CrestScribe
                     ulong locationId = (ulong)locationResponse.SolarSystemId;
                     var loc = new CharacterLocation()
                     {
-                        CharacterId = CharacterId,
+                        CharacterId = UserSsoCharacter.CharacterId,
                         SystemId = locationId,
                         ShipId = CurrentShipId
                     };
@@ -327,7 +243,7 @@ namespace borkedLabs.CrestScribe
                         {
                             var lochistory = new CharacterLocationHistory()
                             {
-                                CharacterId = CharacterId,
+                                CharacterId = UserSsoCharacter.CharacterId,
                                 PreviousSystemId = currentSystemId.Value,
                                 CurrentSystemId = locationId,
                                 ShipId = CurrentShipId
@@ -353,26 +269,9 @@ namespace borkedLabs.CrestScribe
             }
         }
 
-        public bool Save()
-        {
-            using (MySqlConnection sql = SqlContext.GetConnection())
-            {
-                UpdatedAt = DateTime.UtcNow;
-                string q = @"UPDATE user_ssocharacter SET refresh_token = @RefreshToken, 
-                                    access_token = @AccessToken, 
-                                    access_token_expiration = @TokenExpiration,
-                                    updated_at = @UpdatedAt,
-                                    valid = @Valid
-                                WHERE character_owner_hash = @CharacterOwnerHash AND user_id = @UserId";
-
-                var count = sql.Execute(q, this);
-                return count > 0;
-            }
-        }
-
         public bool ShouldGetLocation()
         {
-            return Valid && (LastLocationQueryAt < DateTime.UtcNow.AddSeconds(ScribeSettings.Settings.CrestLocation.Interval));
+            return UserSsoCharacter.Valid && (LastLocationQueryAt < DateTime.UtcNow.AddSeconds(ScribeSettings.Settings.CrestLocation.Interval));
         }
 
         public void SessionWaitFastFoward()
@@ -389,7 +288,7 @@ namespace borkedLabs.CrestScribe
       
         public async Task Poll()
         {
-            if (!Valid)
+            if (!UserSsoCharacter.Valid)
             {
                 return;
             }
@@ -397,13 +296,13 @@ namespace borkedLabs.CrestScribe
 
             Session session = null;
 
-            if(!AlwaysTrackLocation)
+            if(!UserSsoCharacter.AlwaysTrackLocation)
             {
-                session = Session.Find(UserId, CharacterId);
+                session = Session.Find(UserSsoCharacter.UserId, UserSsoCharacter.CharacterId);
             }
             else
             {
-                session = Session.Find(UserId);
+                session = Session.Find(UserSsoCharacter.UserId);
             }
 
             if(session == null || session.UpdatedAt.AddMinutes(1) < DateTime.UtcNow )
@@ -417,15 +316,15 @@ namespace borkedLabs.CrestScribe
 
                 return;
             }
-            if (TokenExpiration < DateTime.UtcNow)
+            if (UserSsoCharacter.TokenExpiration < DateTime.UtcNow)
             {
                 bool changed = await RefreshAccess();
                 if (changed)
                 {
-                    Save();
+                    UserSsoCharacter.Save();
                 }
 
-                if(!Valid)
+                if(!UserSsoCharacter.Valid)
                 {
                     return;
                 }
@@ -451,7 +350,7 @@ namespace borkedLabs.CrestScribe
                  }
              }
              else*/
-            if (ScopeCharacterLocationRead)
+            if (UserSsoCharacter.ScopeCharacterLocationRead)
             {
                 if (_characterCrest == null)
                 {

@@ -72,7 +72,7 @@ namespace borkedLabs.CrestScribe
             while (!_cts.Token.IsCancellationRequested)
             {
                 bool dbAvaliable = true;
-                List<SsoCharacter> characters = null;
+                List<UserSsoCharacter> characters = null;
 
                 try
                 {
@@ -114,10 +114,11 @@ namespace borkedLabs.CrestScribe
                         logger.Info("Adding {0} characters to query queue", characters.Count());
                         foreach (var character in characters)
                         {
-                            character.QueryQueue = _queryQueue;
-                            if (Characters.TryAdd(character.CharacterOwnerHash, character))
+                            var wrapper = new SsoCharacter(character);
+                            wrapper.QueryQueue = _queryQueue;
+                            if (Characters.TryAdd(character.CharacterOwnerHash, wrapper))
                             {
-                                _queryQueue.Add(character);
+                                _queryQueue.Add(wrapper);
                             }
                             else
                             {
