@@ -430,25 +430,26 @@ namespace borkedLabs.CrestScribe
             }
 
             // CREST may not return anything when the server is down :/
-            if(ScopeEsiLocationReadLocation)
-            {
-                if ( ShouldGetLocation())
-                {
-                    if (!await GetLocationESI())
-                    {
-                        State = SsoCharacterState.ErrorSlowdown;
-                        //not an active char or CREST is having issues, slow down
-                        lock (_pollTimerLock)
-                        {
-                            _pollTimer = new Timer(new TimerCallback(_pollTimerCallback), null, 20 * 1000, Timeout.Infinite);
-                        }
+            /* if(ScopeEsiLocationReadLocation)
+             {
+                 if ( ShouldGetLocation())
+                 {
+                     if (!await GetLocationESI())
+                     {
+                         State = SsoCharacterState.ErrorSlowdown;
+                         //not an active char or CREST is having issues, slow down
+                         lock (_pollTimerLock)
+                         {
+                             _pollTimer = new Timer(new TimerCallback(_pollTimerCallback), null, 20 * 1000, Timeout.Infinite);
+                         }
 
-                        return;
-                    }
+                         return;
+                     }
 
-                }
-            }
-            else if(ScopeCharacterLocationRead)
+                 }
+             }
+             else*/
+            if (ScopeCharacterLocationRead)
             {
                 if (_characterCrest == null)
                 {
