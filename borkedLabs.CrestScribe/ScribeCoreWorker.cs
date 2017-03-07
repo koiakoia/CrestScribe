@@ -12,14 +12,14 @@ namespace borkedLabs.CrestScribe
 {
     public static class ScribeCoreWorker
     {
-        private static BlockingCollection<SsoCharacter> _queryQueue = new BlockingCollection<SsoCharacter>();
+        private static BlockingCollection<CharacterMaintainer> _queryQueue = new BlockingCollection<CharacterMaintainer>();
         private static Logger logger = LogManager.GetCurrentClassLogger();
         private static CancellationTokenSource _cts = new CancellationTokenSource();
         private static CancellationTokenSource _workerCts = new CancellationTokenSource();
 
         private static List<ScribeQueryWorker> _queryWorkers = new List<ScribeQueryWorker>();
 
-        private static ConcurrentDictionary<string, SsoCharacter> Characters = new ConcurrentDictionary<string, SsoCharacter>();
+        private static ConcurrentDictionary<string, CharacterMaintainer> Characters = new ConcurrentDictionary<string, CharacterMaintainer>();
         private static Thread _thread = null;
 
         public static void StartWork()
@@ -46,9 +46,9 @@ namespace borkedLabs.CrestScribe
             }
         }
 
-        public static SsoCharacter GetCharacter(string charOwnerHash)
+        public static CharacterMaintainer GetCharacter(string charOwnerHash)
         {
-            SsoCharacter character = null;
+            CharacterMaintainer character = null;
             lock (Characters)
             {
                 if(Characters.ContainsKey(charOwnerHash))
@@ -114,7 +114,7 @@ namespace borkedLabs.CrestScribe
                         logger.Info("Adding {0} characters to query queue", characters.Count());
                         foreach (var character in characters)
                         {
-                            var wrapper = new SsoCharacter(character);
+                            var wrapper = new CharacterMaintainer(character);
                             wrapper.QueryQueue = _queryQueue;
                             if (Characters.TryAdd(character.CharacterOwnerHash, wrapper))
                             {
@@ -159,7 +159,7 @@ namespace borkedLabs.CrestScribe
                         createdCutoff = DateTime.SpecifyKind(DateTime.MinValue, DateTimeKind.Utc);
 
                         _queryQueue.Dispose();
-                        _queryQueue = new BlockingCollection<SsoCharacter>();
+                        _queryQueue = new BlockingCollection<CharacterMaintainer>();
                     }
                 }
 

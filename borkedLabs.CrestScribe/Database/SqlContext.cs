@@ -12,7 +12,7 @@ namespace borkedLabs.CrestScribe.Database
     {
         public static List<UserSsoCharacter> GetSSOCharacters(DateTime createdAtCutoff)
         {
-            var result = new List<SsoCharacter>();
+            var result = new List<CharacterMaintainer>();
             using (MySqlConnection sql = new MySqlConnection(ScribeSettings.Settings.Database.ConnectionString))
             {
                 sql.Open();

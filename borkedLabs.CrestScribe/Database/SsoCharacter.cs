@@ -123,5 +123,29 @@ namespace borkedLabs.CrestScribe.Database
                 return count > 0;
             }
         }
+
+
+        public static UserSsoCharacter Find(uint userId, string characterOwnerHash)
+        {
+            using (MySqlConnection sql = new MySqlConnection(ScribeSettings.Settings.Database.ConnectionString))
+            {
+                sql.Open();
+
+                string q = @"SELECT user_id as UserId, refresh_token as RefreshToken, access_token AccessToken,
+                                    character_id CharacterId,character_owner_hash CharacterOwnerHash, 
+                                    access_token_expiration TokenExpiration, created_at CreatedAt, 
+                                    updated_at UpdatedAt, valid Valid,
+                                    always_track_location AlwaysTrackLocation,
+                                    scope_character_location_read ScopeCharacterLocationRead,
+                                    scope_character_navigation_write ScopeCharacterNavigationWrite,
+                                    scope_esi_location_read_location ScopeEsiLocationReadLocation,
+                                    scope_esi_location_read_ship_type ScopeEsiLocationReadShipType,
+                                    scope_esi_ui_write_waypoint ScopeEsiUiWriteWaypoint,
+                                    scope_esi_ui_open_window ScopeEsiUiOpenWindow
+                            FROM user_ssocharacter 
+                            WHERE character_owner_hash = @characterOwnerHash AND user_id = @UserId";
+                return sql.Query<UserSsoCharacter>(q, new { userId = userId, characterOwnerHash = characterOwnerHash }).FirstOrDefault();
+            }
+        }
     }
 }

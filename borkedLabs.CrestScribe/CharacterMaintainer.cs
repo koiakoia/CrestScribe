@@ -20,12 +20,13 @@ namespace borkedLabs.CrestScribe
         Init,
         NoActiveSessionWait,
         WaitingToPoll,
-        ErrorSlowdown
+        ErrorSlowdown,
+        InvalidToken
     }
 
-    public class SsoCharacter
+    public class CharacterMaintainer
     {
-        private UserSsoCharacter UserSsoCharacter;
+        private UserSsoCharacter _userSsoCharacter;
 
         private static Logger logger = LogManager.GetCurrentClassLogger();
 
@@ -61,16 +62,16 @@ namespace borkedLabs.CrestScribe
         /// <summary>
         /// Reference to query queue that we keep adding ourselves to upon the polltimer firing
         /// </summary>
-        public BlockingCollection<SsoCharacter> QueryQueue { get;set; }
+        public BlockingCollection<CharacterMaintainer> QueryQueue { get;set; }
 
         public SsoCharacterState State { get; private set; } = SsoCharacterState.Init;
 
-        public SsoCharacter(UserSsoCharacter character)
+        public CharacterMaintainer(UserSsoCharacter character)
         {
-            UserSsoCharacter = character;
-            _crest = new DynamicCrest(UserSsoCharacter.AccessToken);
+            _userSsoCharacter = character;
+            _crest = new DynamicCrest(_userSsoCharacter.AccessToken);
             _crest.EncodedKey = ScribeSettings.Settings.Sso.EncodedKey;
-            _crest.RefreshToken = UserSsoCharacter.RefreshToken;
+            _crest.RefreshToken = _userSsoCharacter.RefreshToken;
             _crest.EnableAutomaticTokenRefresh = false;
             LastLocationQueryAt = DateTime.MinValue;
             LastSuccessfulLocationQueryAt = DateTime.MinValue;
@@ -101,9 +102,9 @@ namespace borkedLabs.CrestScribe
 
                 if (response.TokenType == "Bearer")
                 {
-                    UserSsoCharacter.AccessToken = response.AccessToken;
-                    UserSsoCharacter.RefreshToken = response.RefreshToken;
-                    UserSsoCharacter.TokenExpiration = DateTime.UtcNow.AddSeconds(response.ExpiresIn);
+                    _userSsoCharacter.AccessToken = response.AccessToken;
+                    _userSsoCharacter.RefreshToken = response.RefreshToken;
+                    _userSsoCharacter.TokenExpiration = DateTime.UtcNow.AddSeconds(response.ExpiresIn);
 
                     return true;
                 }
@@ -121,7 +122,7 @@ namespace borkedLabs.CrestScribe
                     if(webResponse.StatusCode == HttpStatusCode.BadRequest ||
                         webResponse.StatusCode == HttpStatusCode.Unauthorized)
                     {
-                        UserSsoCharacter.Valid = false;
+                        _userSsoCharacter.Valid = false;
                         return true;
                     }
                 }
@@ -160,7 +161,7 @@ namespace borkedLabs.CrestScribe
                     ulong locationId = (ulong)location["solarSystem"].id;
                     var loc = new CharacterLocation()
                     {
-                        CharacterId = UserSsoCharacter.CharacterId,
+                        CharacterId = _userSsoCharacter.CharacterId,
                         SystemId = locationId
                     };
 
@@ -172,7 +173,7 @@ namespace borkedLabs.CrestScribe
                         {
                             var lochistory = new CharacterLocationHistory()
                             {
-                                CharacterId = UserSsoCharacter.CharacterId,
+                                CharacterId = _userSsoCharacter.CharacterId,
                                 PreviousSystemId = currentSystemId.Value,
                                 CurrentSystemId = locationId
                             };
@@ -211,8 +212,8 @@ namespace borkedLabs.CrestScribe
                 try
                 {
                     // Get character location
-                    locationResponse = await apiInstance.GetCharactersCharacterIdLocationAsync((int)UserSsoCharacter.CharacterId, "tranquility");
-                    shipResponse = await apiInstance.GetCharactersCharacterIdShipAsync((int)UserSsoCharacter.CharacterId, "tranquility");
+                    locationResponse = await apiInstance.GetCharactersCharacterIdLocationAsync((int)_userSsoCharacter.CharacterId, "tranquility");
+                    shipResponse = await apiInstance.GetCharactersCharacterIdShipAsync((int)_userSsoCharacter.CharacterId, "tranquility");
                 }
                 catch
                 {
@@ -230,7 +231,7 @@ namespace borkedLabs.CrestScribe
                     ulong locationId = (ulong)locationResponse.SolarSystemId;
                     var loc = new CharacterLocation()
                     {
-                        CharacterId = UserSsoCharacter.CharacterId,
+                        CharacterId = _userSsoCharacter.CharacterId,
                         SystemId = locationId,
                         ShipId = CurrentShipId
                     };
@@ -243,7 +244,7 @@ namespace borkedLabs.CrestScribe
                         {
                             var lochistory = new CharacterLocationHistory()
                             {
-                                CharacterId = UserSsoCharacter.CharacterId,
+                                CharacterId = _userSsoCharacter.CharacterId,
                                 PreviousSystemId = currentSystemId.Value,
                                 CurrentSystemId = locationId,
                                 ShipId = CurrentShipId
@@ -271,7 +272,7 @@ namespace borkedLabs.CrestScribe
 
         public bool ShouldGetLocation()
         {
-            return UserSsoCharacter.Valid && (LastLocationQueryAt < DateTime.UtcNow.AddSeconds(ScribeSettings.Settings.CrestLocation.Interval));
+            return _userSsoCharacter.Valid && (LastLocationQueryAt < DateTime.UtcNow.AddSeconds(ScribeSettings.Settings.CrestLocation.Interval));
         }
 
         public void SessionWaitFastFoward()
@@ -285,47 +286,80 @@ namespace borkedLabs.CrestScribe
                 }
             }
         }
+
+        public void ResyncWithDatabase()
+        {
+            var charResult = UserSsoCharacter.Find(_userSsoCharacter.UserId, _userSsoCharacter.CharacterOwnerHash);
+
+            if(charResult != null)
+            {
+                _userSsoCharacter = charResult;
+                _crest.AccessToken = _userSsoCharacter.AccessToken;
+                _crest.RefreshToken = _userSsoCharacter.RefreshToken;
+
+                //should we reschedule the character?
+                if( State == SsoCharacterState.InvalidToken &&
+                    charResult.Valid)
+                {
+                    State = SsoCharacterState.NoActiveSessionWait;
+                    setTimer(20);
+                }
+                else if(!charResult.Valid)
+                {
+                    State = SsoCharacterState.InvalidToken;
+                    setTimer(600);
+                }
+            }
+        }
+
+        private void setTimer(int timeoutSeconds)
+        {
+            lock (_pollTimerLock)
+            {
+                _pollTimer = new Timer(new TimerCallback(_pollTimerCallback), null, timeoutSeconds * 1000, Timeout.Infinite);
+            }
+        }
       
         public async Task Poll()
         {
-            if (!UserSsoCharacter.Valid)
+            if (State == SsoCharacterState.InvalidToken)
             {
-                return;
+                ResyncWithDatabase();
+                if (!_userSsoCharacter.Valid)
+                    return;
             }
 
 
             Session session = null;
 
-            if(!UserSsoCharacter.AlwaysTrackLocation)
+            if(!_userSsoCharacter.AlwaysTrackLocation)
             {
-                session = Session.Find(UserSsoCharacter.UserId, UserSsoCharacter.CharacterId);
+                session = Session.Find(_userSsoCharacter.UserId, _userSsoCharacter.CharacterId);
             }
             else
             {
-                session = Session.Find(UserSsoCharacter.UserId);
+                session = Session.Find(_userSsoCharacter.UserId);
             }
 
             if(session == null || session.UpdatedAt.AddMinutes(1) < DateTime.UtcNow )
             {
                 State = SsoCharacterState.NoActiveSessionWait;
                 //not an active session, dont poll as often but also dont continue
-                lock (_pollTimerLock)
-                {
-                    _pollTimer = new Timer(new TimerCallback(_pollTimerCallback), null, 20 * 1000, Timeout.Infinite);
-                }
+                setTimer(20 * 1000);
 
                 return;
             }
-            if (UserSsoCharacter.TokenExpiration < DateTime.UtcNow)
+            if (_userSsoCharacter.TokenExpiration < DateTime.UtcNow)
             {
                 bool changed = await RefreshAccess();
                 if (changed)
                 {
-                    UserSsoCharacter.Save();
+                    _userSsoCharacter.Save();
                 }
 
-                if(!UserSsoCharacter.Valid)
+                if (!_userSsoCharacter.Valid)
                 {
+                    State = SsoCharacterState.InvalidToken;
                     return;
                 }
             }
@@ -350,7 +384,7 @@ namespace borkedLabs.CrestScribe
                  }
              }
              else*/
-            if (UserSsoCharacter.ScopeCharacterLocationRead)
+            if (_userSsoCharacter.ScopeCharacterLocationRead)
             {
                 if (_characterCrest == null)
                 {
@@ -371,10 +405,7 @@ namespace borkedLabs.CrestScribe
                     {
                         State = SsoCharacterState.ErrorSlowdown;
                         //not an active char or CREST is having issues, slow down
-                        lock (_pollTimerLock)
-                        {
-                            _pollTimer = new Timer(new TimerCallback(_pollTimerCallback), null, 20 * 1000, Timeout.Infinite);
-                        }
+                        setTimer(20);
 
                         return;
                     }
@@ -385,7 +416,7 @@ namespace borkedLabs.CrestScribe
             State = SsoCharacterState.WaitingToPoll;
             lock (_pollTimerLock)
             {
-                _pollTimer = new Timer(new TimerCallback(_pollTimerCallback), null, ScribeSettings.Settings.CrestLocation.Interval * 1000, Timeout.Infinite);
+                setTimer(ScribeSettings.Settings.CrestLocation.Interval);
             }
         }
     }

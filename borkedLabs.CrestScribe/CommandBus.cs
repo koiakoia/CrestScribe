@@ -74,7 +74,7 @@ namespace borkedLabs.CrestScribe
                             var character = ScribeCoreWorker.GetCharacter(charHash);
                             if (character != null)
                             {
-                                character.SessionWaitFastFoward();
+                                character.ResyncWithDatabase();
                             }
                         }
                     }

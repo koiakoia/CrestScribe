@@ -135,7 +135,7 @@
     <Compile Include="Settings\SettingsRoot.cs" />
     <Compile Include="Settings\SsoSettings.cs" />
     <Compile Include="Settings\WorkerSettings.cs" />
-    <Compile Include="SsoCharacter.cs" />
+    <Compile Include="CharacterMaintainer.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

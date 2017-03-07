@@ -10,12 +10,12 @@ namespace borkedLabs.CrestScribe
 {
     public class ScribeQueryWorker
     {
-        private BlockingCollection<SsoCharacter> _queryQueue;
+        private BlockingCollection<CharacterMaintainer> _queryQueue;
         private CancellationToken _cancelToken;
 
         public Thread Thread { get; private set; }
 
-        public ScribeQueryWorker(BlockingCollection<SsoCharacter> queryQueue, CancellationToken cancelToken)
+        public ScribeQueryWorker(BlockingCollection<CharacterMaintainer> queryQueue, CancellationToken cancelToken)
         {
             _queryQueue = queryQueue;
             _cancelToken = cancelToken;
