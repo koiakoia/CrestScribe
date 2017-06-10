@@ -345,7 +345,7 @@ namespace borkedLabs.CrestScribe
             {
                 State = SsoCharacterState.NoActiveSessionWait;
                 //not an active session, dont poll as often but also dont continue
-                setTimer(20 * 1000);
+                setTimer(20);
 
                 return;
             }
@@ -365,26 +365,25 @@ namespace borkedLabs.CrestScribe
             }
 
             // CREST may not return anything when the server is down :/
-            /* if(ScopeEsiLocationReadLocation)
-             {
-                 if ( ShouldGetLocation())
-                 {
-                     if (!await GetLocationESI())
-                     {
-                         State = SsoCharacterState.ErrorSlowdown;
-                         //not an active char or CREST is having issues, slow down
-                         lock (_pollTimerLock)
-                         {
-                             _pollTimer = new Timer(new TimerCallback(_pollTimerCallback), null, 20 * 1000, Timeout.Infinite);
-                         }
+            if(_userSsoCharacter.ScopeEsiLocationReadLocation)
+            {
+                if ( ShouldGetLocation())
+                {
+                    if (!await GetLocationESI())
+                    {
+                        State = SsoCharacterState.ErrorSlowdown;
+                        //not an active char or CREST is having issues, slow down
+                        lock (_pollTimerLock)
+                        {
+                            _pollTimer = new Timer(new TimerCallback(_pollTimerCallback), null, 20 * 1000, Timeout.Infinite);
+                        }
 
-                         return;
-                     }
+                        return;
+                    }
 
-                 }
-             }
-             else*/
-            if (_userSsoCharacter.ScopeCharacterLocationRead)
+                }
+            }
+            else if (_userSsoCharacter.ScopeCharacterLocationRead)
             {
                 if (_characterCrest == null)
                 {
