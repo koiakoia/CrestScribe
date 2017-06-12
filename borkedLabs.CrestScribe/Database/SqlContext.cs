@@ -26,6 +26,7 @@ namespace borkedLabs.CrestScribe.Database
                                     scope_character_navigation_write ScopeCharacterNavigationWrite,
                                     scope_esi_location_read_location ScopeEsiLocationReadLocation,
                                     scope_esi_location_read_ship_type ScopeEsiLocationReadShipType,
+                                    scope_esi_location_read_online ScopeEsiLocationReadOnline,
                                     scope_esi_ui_write_waypoint ScopeEsiUiWriteWaypoint,
                                     scope_esi_ui_open_window ScopeEsiUiOpenWindow
                             FROM user_ssocharacter WHERE created_at > @createdAtCutoff";

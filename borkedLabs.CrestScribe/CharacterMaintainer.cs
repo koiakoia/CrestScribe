@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using System.Collections.Concurrent;
 using NLog;
 using borkedLabs.CrestScribe.Database;
+using borkedLabs.CrestScribe.ESI;
 
 namespace borkedLabs.CrestScribe
 {
@@ -202,18 +203,37 @@ namespace borkedLabs.CrestScribe
         {
             try
             {
-
                 // Configure OAuth2 access token for authorization: evesso
-                ESI.Client.Configuration.Default.AccessToken = _crest.AccessToken;
-                var apiInstance = new ESI.Api.LocationApi();
+                var client = new ESI.ESIClient()
+                {
+                    AccessToken = _crest.AccessToken
+                };
 
-                ESI.Model.GetCharactersCharacterIdLocationOk locationResponse = null;
-                ESI.Model.GetCharactersCharacterIdShipOk shipResponse = null;
+
+                ESIResponseLocationLocationv1 locationResponse = null;
+                ESIResponseLocationShipv1 shipResponse = null;
                 try
                 {
-                    // Get character location
-                    locationResponse = await apiInstance.GetCharactersCharacterIdLocationAsync((int)_userSsoCharacter.CharacterId, "tranquility");
-                    shipResponse = await apiInstance.GetCharactersCharacterIdShipAsync((int)_userSsoCharacter.CharacterId, "tranquility");
+                    bool online = true;
+
+                    if(_userSsoCharacter.ScopeEsiLocationReadOnline)
+                    {
+                        online = false;
+
+                        var onlineQuery = await client.GetOnlinev1((int)_userSsoCharacter.CharacterId);
+
+                        if (onlineQuery.IsSuccessStatus)
+                            online = onlineQuery.Result;
+                    }
+
+                    if(online)
+                    {
+                        // Get character location
+                        var query1 = await client.GetLocationv1((int)_userSsoCharacter.CharacterId);
+                        locationResponse = query1.Result;
+                        var query2 = await client.GetShipv1((int)_userSsoCharacter.CharacterId);
+                        shipResponse = query2.Result;
+                    }
                 }
                 catch
                 {
@@ -365,6 +385,7 @@ namespace borkedLabs.CrestScribe
             }
 
             // CREST may not return anything when the server is down :/
+            
             if(_userSsoCharacter.ScopeEsiLocationReadLocation)
             {
                 if ( ShouldGetLocation())

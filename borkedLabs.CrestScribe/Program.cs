@@ -20,6 +20,8 @@ namespace borkedLabs.CrestScribe
 
             ScribeSettings.Load("settings.json");
 
+            ESI.ESIRequestor.Configure();
+
             //Increase the connection limit which is usually per host in .NET
             System.Net.ServicePointManager.DefaultConnectionLimit = ScribeSettings.Settings.Worker.Total * 2;
 
