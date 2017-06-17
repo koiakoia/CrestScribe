@@ -20,6 +20,9 @@ namespace borkedLabs.CrestScribe.Settings
         [JsonProperty("command_bus")]
         public CommandBusSettings CommandBus { get; set; }
 
+        [JsonProperty("redis")]
+        public RedisSettings Redis { get; set; }
+
         public static SettingsRoot Load(string file)
         {
             using (StreamReader f = File.OpenText(file))

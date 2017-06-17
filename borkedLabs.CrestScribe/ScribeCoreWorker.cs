@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using borkedLabs.CrestScribe.Database;
+using StackExchange.Redis;
 
 namespace borkedLabs.CrestScribe
 {
@@ -21,6 +22,7 @@ namespace borkedLabs.CrestScribe
 
         private static ConcurrentDictionary<string, CharacterMaintainer> Characters = new ConcurrentDictionary<string, CharacterMaintainer>();
         private static Thread _thread = null;
+        public static ConnectionMultiplexer Redis = null;
 
         public static void StartWork()
         {
@@ -68,6 +70,7 @@ namespace borkedLabs.CrestScribe
         {
             DateTime createdCutoff = DateTime.SpecifyKind(DateTime.MinValue, DateTimeKind.Utc);
             logger.Info("Starting service");
+            Redis = ConnectionMultiplexer.Connect(ScribeSettings.Settings.Redis.ConnectionString);
 
             while (!_cts.Token.IsCancellationRequested)
             {

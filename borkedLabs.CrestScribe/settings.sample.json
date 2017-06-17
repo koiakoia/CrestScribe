@@ -19,6 +19,10 @@
   },
   "command_bus": {
     "host": "localhost",
-    "port": "5558"
+    "port": 5558
+  },
+  "redis": {
+    "host": "localhost",
+    "port": 6379
   }
 }

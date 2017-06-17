@@ -13,6 +13,7 @@ using System.Collections.Concurrent;
 using NLog;
 using borkedLabs.CrestScribe.Database;
 using borkedLabs.CrestScribe.ESI;
+using Newtonsoft.Json;
 
 namespace borkedLabs.CrestScribe
 {
@@ -166,7 +167,8 @@ namespace borkedLabs.CrestScribe
                         SystemId = locationId
                     };
 
-                    loc.Save();
+                    var redis = ScribeCoreWorker.Redis.GetDatabase();
+                    await redis.StringSetAsync("character-location-" + _userSsoCharacter.CharacterId, JsonConvert.SerializeObject(loc));
 
                     if (LastSuccessfulLocationQueryAt > DateTime.UtcNow.AddSeconds(ScribeSettings.Settings.CrestLocation.JumpValidAgeSeconds))
                     {
@@ -249,6 +251,7 @@ namespace borkedLabs.CrestScribe
                 if (locationResponse != null )
                 {
                     ulong locationId = (ulong)locationResponse.SolarSystemId;
+
                     var loc = new CharacterLocation()
                     {
                         CharacterId = _userSsoCharacter.CharacterId,
@@ -256,7 +259,8 @@ namespace borkedLabs.CrestScribe
                         ShipId = CurrentShipId
                     };
 
-                    loc.Save();
+                    var redis = ScribeCoreWorker.Redis.GetDatabase();
+                    await redis.StringSetAsync("character-location-" + _userSsoCharacter.CharacterId, JsonConvert.SerializeObject(loc), new TimeSpan(0,2,0));
 
                     if (LastSuccessfulLocationQueryAt > DateTime.UtcNow.AddSeconds(ScribeSettings.Settings.CrestLocation.JumpValidAgeSeconds))
                     {
