@@ -13,7 +13,7 @@ namespace borkedLabs.CrestScribe.ESI
     {
         public static HttpClient HttpClient = new HttpClient(new Http2CustomHandler());
 
-        public static string UserAgent { get; set; }
+        public static string UserAgent { get; set; } = "siggy.scribe/1.0.0.0.0.0.0.2 (siggy.borkedlabs.com)";
 
         private static Uri defaultBaseUri = new Uri("https://esi.tech.ccp.is/");
 
@@ -32,6 +32,7 @@ namespace borkedLabs.CrestScribe.ESI
         public static void Configure()
         {
             BaseUri = defaultBaseUri;
+            HttpClient.DefaultRequestHeaders.Add("User-Agent", UserAgent);
             HttpClient.DefaultRequestHeaders.Accept.Clear();
             HttpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
         }
