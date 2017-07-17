@@ -223,8 +223,6 @@ namespace borkedLabs.CrestScribe
                     {
                         if(!isOnline.HasValue || (DateTime.UtcNow - lastOnlineCheckTime).TotalSeconds > 60)
                         {
-
-
                             ESIResponse<bool> onlineQuery = null;
                             int attempts = 0;
 
@@ -238,9 +236,10 @@ namespace borkedLabs.CrestScribe
                                 isOnline = onlineQuery.Result;
                             else
                                 isOnline = null;
+
+                            lastOnlineCheckTime = DateTime.UtcNow;
                         }
 
-                        lastOnlineCheckTime = DateTime.UtcNow;
                     }
                     else
                     {

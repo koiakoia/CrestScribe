@@ -50,11 +50,13 @@ namespace borkedLabs.CrestScribe.ESI
                 if (r.IsSuccessStatusCode)
                 {
                     string result = await r.Content.ReadAsStringAsync();
+                    await RedisTtlCounter.IncrementCounter("ttlc:esiSuccess");
 
                     model = JsonConvert.DeserializeObject<T>(result);
                 }
                 else
                 {
+                    await RedisTtlCounter.IncrementCounter("ttlc:esiFailure");
                     Debug.WriteLine("[{0}] {1} Method response status code {2}", DateTime.Now.ToString(), methodPath, r.StatusCode);
                 }
 

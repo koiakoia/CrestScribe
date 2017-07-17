@@ -155,6 +155,7 @@
     <Compile Include="ProjectInstaller.Designer.cs">
       <DependentUpon>ProjectInstaller.cs</DependentUpon>
     </Compile>
+    <Compile Include="RedisTtlCounter.cs" />
     <Compile Include="ScribeCoreWorker.cs" />
     <Compile Include="ScribeQueryWorker.cs" />
     <Compile Include="ScribeService.cs">
