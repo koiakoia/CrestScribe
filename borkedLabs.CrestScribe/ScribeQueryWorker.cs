@@ -1,4 +1,5 @@
-﻿using System;
+﻿using NLog;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,6 +11,7 @@ namespace borkedLabs.CrestScribe
 {
     public class ScribeQueryWorker
     {
+        private static Logger logger = LogManager.GetCurrentClassLogger();
         private BlockingCollection<CharacterMaintainer> _queryQueue;
         private CancellationToken _cancelToken;
 
@@ -59,6 +61,10 @@ namespace borkedLabs.CrestScribe
                 catch (System.OperationCanceledException)
                 {
                     break;
+                }
+                catch(Exception ex)
+                {
+                    logger.Error(ex, "Exception querying character");
                 }
             }
         }

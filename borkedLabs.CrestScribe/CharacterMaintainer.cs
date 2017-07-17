@@ -14,6 +14,7 @@ using NLog;
 using borkedLabs.CrestScribe.Database;
 using borkedLabs.CrestScribe.ESI;
 using Newtonsoft.Json;
+using System.Diagnostics;
 
 namespace borkedLabs.CrestScribe
 {
@@ -168,7 +169,7 @@ namespace borkedLabs.CrestScribe
                     };
 
                     var redis = ScribeCoreWorker.Redis.GetDatabase();
-                    await redis.StringSetAsync("character-location-" + _userSsoCharacter.CharacterId, JsonConvert.SerializeObject(loc));
+                    await redis.StringSetAsync("siggy:location:character#" + _userSsoCharacter.CharacterId, JsonConvert.SerializeObject(loc));
 
                     if (LastSuccessfulLocationQueryAt > DateTime.UtcNow.AddSeconds(ScribeSettings.Settings.CrestLocation.JumpValidAgeSeconds))
                     {
@@ -200,6 +201,8 @@ namespace borkedLabs.CrestScribe
             }
         }
 
+        private bool? isOnline = null;
+        private DateTime lastOnlineCheckTime = DateTime.UtcNow;
 
         public async Task<bool> GetLocationESI()
         {
@@ -216,24 +219,54 @@ namespace borkedLabs.CrestScribe
                 ESIResponseLocationShipv1 shipResponse = null;
                 try
                 {
-                    bool online = true;
-
-                    if(_userSsoCharacter.ScopeEsiLocationReadOnline)
+                    if (_userSsoCharacter.ScopeEsiLocationReadOnline)
                     {
-                        online = false;
+                        if(!isOnline.HasValue || (DateTime.UtcNow - lastOnlineCheckTime).TotalSeconds > 60)
+                        {
 
-                        var onlineQuery = await client.GetOnlinev1((int)_userSsoCharacter.CharacterId);
 
-                        if (onlineQuery.IsSuccessStatus)
-                            online = onlineQuery.Result;
+                            ESIResponse<bool> onlineQuery = null;
+                            int attempts = 0;
+
+                            do
+                            {
+                                Debug.WriteLine("[{0}] Online querying {1}", DateTime.Now.ToString(), _userSsoCharacter.CharacterId);
+                                onlineQuery = await client.GetOnlinev1((int)_userSsoCharacter.CharacterId);
+                            } while ((onlineQuery == null || onlineQuery.StatusCode == HttpStatusCode.BadGateway) && ++attempts < 2);
+
+                            if (onlineQuery.IsSuccessStatus)
+                                isOnline = onlineQuery.Result;
+                            else
+                                isOnline = null;
+                        }
+
+                        lastOnlineCheckTime = DateTime.UtcNow;
+                    }
+                    else
+                    {
+                        isOnline = true;
                     }
 
-                    if(online)
+                    if(isOnline.Value == true)
                     {
                         // Get character location
-                        var query1 = await client.GetLocationv1((int)_userSsoCharacter.CharacterId);
+
+                        int attempts = 0;
+                        ESIResponse<ESIResponseLocationLocationv1> query1 = null;
+                        do
+                        {
+                            Debug.WriteLine("[{0}] Location querying {1}", DateTime.Now.ToString(), _userSsoCharacter.CharacterId);
+                            query1 = await client.GetLocationv1((int)_userSsoCharacter.CharacterId);
+                        } while ((query1 == null || query1.StatusCode == HttpStatusCode.BadGateway) && ++attempts < 2);
                         locationResponse = query1.Result;
-                        var query2 = await client.GetShipv1((int)_userSsoCharacter.CharacterId);
+
+                        attempts = 0;
+                        ESIResponse<ESIResponseLocationShipv1> query2;
+                        do
+                        {
+                            Debug.WriteLine("[{0}] Ship querying {1}", DateTime.Now.ToString(), _userSsoCharacter.CharacterId);
+                            query2 = await client.GetShipv1((int)_userSsoCharacter.CharacterId);
+                        } while ((query2 == null || query2.StatusCode == HttpStatusCode.BadGateway) && ++attempts < 2);
                         shipResponse = query2.Result;
                     }
                 }
@@ -260,7 +293,9 @@ namespace borkedLabs.CrestScribe
                     };
 
                     var redis = ScribeCoreWorker.Redis.GetDatabase();
-                    await redis.StringSetAsync("character-location-" + _userSsoCharacter.CharacterId, JsonConvert.SerializeObject(loc), new TimeSpan(0,2,0));
+                    await redis.StringSetAsync("siggy:location:character#" + _userSsoCharacter.CharacterId, JsonConvert.SerializeObject(loc), new TimeSpan(0,2,0));
+
+                    Debug.WriteLine("[{0}] Got location {1} for character {2}", DateTime.Now.ToString(), loc.SystemId, _userSsoCharacter.CharacterId);
 
                     if (LastSuccessfulLocationQueryAt > DateTime.UtcNow.AddSeconds(ScribeSettings.Settings.CrestLocation.JumpValidAgeSeconds))
                     {
@@ -296,7 +331,7 @@ namespace borkedLabs.CrestScribe
 
         public bool ShouldGetLocation()
         {
-            return _userSsoCharacter.Valid && (LastLocationQueryAt < DateTime.UtcNow.AddSeconds(ScribeSettings.Settings.CrestLocation.Interval));
+            return _userSsoCharacter.Valid;
         }
 
         public void SessionWaitFastFoward()
@@ -340,32 +375,35 @@ namespace borkedLabs.CrestScribe
         {
             lock (_pollTimerLock)
             {
+                Debug.WriteLine("[{0}] Setting timeout {1} s", DateTime.Now.ToString(), timeoutSeconds);
                 _pollTimer = new Timer(new TimerCallback(_pollTimerCallback), null, timeoutSeconds * 1000, Timeout.Infinite);
             }
         }
       
         public async Task Poll()
         {
+            Debug.WriteLine("[{0}] Polling character {1}", DateTime.Now.ToString(), _userSsoCharacter.CharacterId);
             if (State == SsoCharacterState.InvalidToken)
             {
+                Debug.WriteLine("[{0}] Resyncing invalid token", DateTime.Now.ToString());
                 ResyncWithDatabase();
                 if (!_userSsoCharacter.Valid)
                     return;
             }
 
 
-            Session session = null;
+            bool active = false;
 
             if(!_userSsoCharacter.AlwaysTrackLocation)
             {
-                session = Session.Find(_userSsoCharacter.UserId, _userSsoCharacter.CharacterId);
+                active = await SiggyUsers.IsActive(_userSsoCharacter.UserId, _userSsoCharacter.CharacterId);
             }
             else
             {
-                session = Session.Find(_userSsoCharacter.UserId);
+                active = await SiggyUsers.IsActive(_userSsoCharacter.UserId);
             }
 
-            if(session == null || session.UpdatedAt.AddMinutes(1) < DateTime.UtcNow )
+            if(!active)
             {
                 State = SsoCharacterState.NoActiveSessionWait;
                 //not an active session, dont poll as often but also dont continue
@@ -373,8 +411,11 @@ namespace borkedLabs.CrestScribe
 
                 return;
             }
-            if (_userSsoCharacter.TokenExpiration < DateTime.UtcNow)
+
+            //refresh early to avoid forbidden errors
+            if (_userSsoCharacter.TokenExpiration.Subtract(new TimeSpan(0,1,0)) < DateTime.UtcNow)
             {
+                Debug.WriteLine("[{0}] Refreshed token", DateTime.Now.ToString());
                 bool changed = await RefreshAccess();
                 if (changed)
                 {
@@ -398,10 +439,7 @@ namespace borkedLabs.CrestScribe
                     {
                         State = SsoCharacterState.ErrorSlowdown;
                         //not an active char or CREST is having issues, slow down
-                        lock (_pollTimerLock)
-                        {
-                            _pollTimer = new Timer(new TimerCallback(_pollTimerCallback), null, 20 * 1000, Timeout.Infinite);
-                        }
+                        setTimer(20);
 
                         return;
                     }
@@ -438,10 +476,7 @@ namespace borkedLabs.CrestScribe
             }
 
             State = SsoCharacterState.WaitingToPoll;
-            lock (_pollTimerLock)
-            {
-                setTimer(ScribeSettings.Settings.CrestLocation.Interval);
-            }
+            setTimer(ScribeSettings.Settings.CrestLocation.Interval);
         }
     }
 }

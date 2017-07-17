@@ -1,6 +1,7 @@
 ﻿using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -13,7 +14,7 @@ namespace borkedLabs.CrestScribe.ESI
     {
         public static HttpClient HttpClient = new HttpClient(new Http2CustomHandler());
 
-        public static string UserAgent { get; set; } = "siggy.scribe/1.0.0.0.0.0.0.2 (siggy.borkedlabs.com)";
+        public static string UserAgent { get; set; } = "siggy.scribe/1.0.0.0 (siggy.borkedlabs.com)";
 
         private static Uri defaultBaseUri = new Uri("https://esi.tech.ccp.is/");
 
@@ -46,11 +47,15 @@ namespace borkedLabs.CrestScribe.ESI
             {
                 T model = default(T);
 
-                if(r.IsSuccessStatusCode)
+                if (r.IsSuccessStatusCode)
                 {
                     string result = await r.Content.ReadAsStringAsync();
 
                     model = JsonConvert.DeserializeObject<T>(result);
+                }
+                else
+                {
+                    Debug.WriteLine("[{0}] {1} Method response status code {2}", DateTime.Now.ToString(), methodPath, r.StatusCode);
                 }
 
                 return new ESIResponse<T>(r.StatusCode, model);
