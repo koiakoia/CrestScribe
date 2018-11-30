@@ -7,6 +7,21 @@ using System.Threading.Tasks;
 
 namespace borkedLabs.CrestScribe.ESI
 {
+    public class ESIResponseLocationOnlinev2
+    {
+        [JsonProperty("last_login")]
+        public DateTime LastLogin { get; set; }
+
+        [JsonProperty("last_logout")]
+        public DateTime LastLogout { get; set; }
+
+        [JsonProperty("logins")]
+        public Int32 Logins { get; set; }
+
+        [JsonProperty("online")]
+        public bool Online { get; set; }
+    }
+
     public class ESIResponseLocationLocationv1
     {
         [JsonProperty("solar_system_id")]

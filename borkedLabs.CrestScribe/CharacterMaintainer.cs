@@ -73,6 +73,7 @@ namespace borkedLabs.CrestScribe
         {
             _userSsoCharacter = character;
             _crest = new DynamicCrest(_userSsoCharacter.AccessToken);
+            _crest.Host = "https://login.eveonline.com/";
             _crest.EncodedKey = ScribeSettings.Settings.Sso.EncodedKey;
             _crest.RefreshToken = _userSsoCharacter.RefreshToken;
             _crest.EnableAutomaticTokenRefresh = false;
@@ -223,17 +224,17 @@ namespace borkedLabs.CrestScribe
                     {
                         if(!isOnline.HasValue || (DateTime.UtcNow - lastOnlineCheckTime).TotalSeconds > 60)
                         {
-                            ESIResponse<bool> onlineQuery = null;
+                            ESIResponse<ESIResponseLocationOnlinev2> onlineQuery = null;
                             int attempts = 0;
 
                             do
                             {
                                 Debug.WriteLine("[{0}] Online querying {1}", DateTime.Now.ToString(), _userSsoCharacter.CharacterId);
-                                onlineQuery = await client.GetOnlinev1((int)_userSsoCharacter.CharacterId);
+                                onlineQuery = await client.GetOnlinev2((int)_userSsoCharacter.CharacterId);
                             } while ((onlineQuery == null || onlineQuery.StatusCode == HttpStatusCode.BadGateway) && ++attempts < 2);
 
                             if (onlineQuery.IsSuccessStatus)
-                                isOnline = onlineQuery.Result;
+                                isOnline = onlineQuery.Result.Online;
                             else
                                 isOnline = null;
 
@@ -401,7 +402,6 @@ namespace borkedLabs.CrestScribe
             {
                 active = await SiggyUsers.IsActive(_userSsoCharacter.UserId);
             }
-
             if(!active)
             {
                 State = SsoCharacterState.NoActiveSessionWait;
