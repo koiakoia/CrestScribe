@@ -15,7 +15,7 @@ namespace eZet.EveLib.Core.Util {
         /// </summary>
         public const string ContentType = "application/x-www-form-urlencoded";
 
-        private static readonly TraceSource Trace = new TraceSource("EveLib");
+        private static readonly TraceSource Trace = new TraceSource("siggy");
 
         /// <summary>
         ///     Creates a new HttpWebRequest for the specified URI, and returns it

@@ -34,7 +34,7 @@ namespace borkedLabs.CrestScribe
         private static Logger logger = LogManager.GetCurrentClassLogger();
 
         /// <summary>
-        /// Current system id after succesful processing of location, 
+        /// Current system id after succesful processing of location,
         /// otherwise null until it can get a location
         /// </summary>
         private UInt64? currentSystemId;
@@ -48,7 +48,7 @@ namespace borkedLabs.CrestScribe
         public DateTime LastLocationQueryAt { get; set; }
 
         /// <summary>
-        /// Last time we got a succesful location result. 
+        /// Last time we got a succesful location result.
         /// Because it can fail either due to CCP, client logging off, or us.
         /// </summary>
         public DateTime LastSuccessfulLocationQueryAt { get; set; }
@@ -82,7 +82,7 @@ namespace borkedLabs.CrestScribe
 
             _pollTimer = null;
         }
-        
+
         private void _pollTimerCallback(object state)
         {
             lock(_pollTimerLock)
@@ -379,7 +379,7 @@ namespace borkedLabs.CrestScribe
                 _pollTimer = new Timer(new TimerCallback(_pollTimerCallback), null, timeoutSeconds * 1000, Timeout.Infinite);
             }
         }
-      
+
         public async Task Poll()
         {
             Debug.WriteLine("[{0}] Polling character {1}", DateTime.Now.ToString(), _userSsoCharacter.CharacterId);
@@ -402,6 +402,7 @@ namespace borkedLabs.CrestScribe
             {
                 active = await SiggyUsers.IsActive(_userSsoCharacter.UserId);
             }
+
             if(!active)
             {
                 State = SsoCharacterState.NoActiveSessionWait;
@@ -414,7 +415,7 @@ namespace borkedLabs.CrestScribe
             //refresh early to avoid forbidden errors
             if (_userSsoCharacter.TokenExpiration.Subtract(new TimeSpan(0,1,0)) < DateTime.UtcNow)
             {
-                Debug.WriteLine("[{0}] Refreshed token", DateTime.Now.ToString());
+                Debug.WriteLine("[{0}] Refreshing token", DateTime.Now.ToString());
                 bool changed = await RefreshAccess();
                 if (changed)
                 {
@@ -429,7 +430,7 @@ namespace borkedLabs.CrestScribe
             }
 
             // CREST may not return anything when the server is down :/
-            
+
             if(_userSsoCharacter.ScopeEsiLocationReadLocation)
             {
                 if ( ShouldGetLocation())

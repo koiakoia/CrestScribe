@@ -9,25 +9,13 @@ namespace eZet.EveLib.EveAuthModule {
         /// <summary>
         ///     The error message
         /// </summary>
-        [DataMember(Name = "message")]
+        [DataMember(Name = "error_description")]
         public string Message { get; set; }
 
         /// <summary>
         ///     The error key
         /// </summary>
-        [DataMember(Name = "key")]
+        [DataMember(Name = "error")]
         public string Key { get; set; }
-
-        /// <summary>
-        ///     The exception type
-        /// </summary>
-        [DataMember(Name = "exceptionType")]
-        public string ExceptionType { get; set; }
-
-        /// <summary>
-        ///     The exception reference ID, if any
-        /// </summary>
-        [DataMember(Name = "refID")]
-        public string RefId { get; set; }
     }
 }
