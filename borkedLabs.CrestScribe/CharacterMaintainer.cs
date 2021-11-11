@@ -216,7 +216,7 @@ namespace borkedLabs.CrestScribe
                 };
 
 
-                ESIResponseLocationLocationv1 locationResponse = null;
+                ESIResponseLocationLocationv2 locationResponse = null;
                 ESIResponseLocationShipv1 shipResponse = null;
                 try
                 {
@@ -224,13 +224,13 @@ namespace borkedLabs.CrestScribe
                     {
                         if(!isOnline.HasValue || (DateTime.UtcNow - lastOnlineCheckTime).TotalSeconds > 60)
                         {
-                            ESIResponse<ESIResponseLocationOnlinev2> onlineQuery = null;
+                            ESIResponse<ESIResponseLocationOnlinev3> onlineQuery = null;
                             int attempts = 0;
 
                             do
                             {
                                 Debug.WriteLine("[{0}] Online querying {1}", DateTime.Now.ToString(), _userSsoCharacter.CharacterId);
-                                onlineQuery = await client.GetOnlinev2((int)_userSsoCharacter.CharacterId);
+                                onlineQuery = await client.GetOnlinev3((int)_userSsoCharacter.CharacterId);
                             } while ((onlineQuery == null || onlineQuery.StatusCode == HttpStatusCode.BadGateway) && ++attempts < 2);
 
                             if (onlineQuery.IsSuccessStatus)
@@ -247,16 +247,16 @@ namespace borkedLabs.CrestScribe
                         isOnline = true;
                     }
 
-                    if(isOnline.Value == true)
+                    if(isOnline.HasValue && isOnline.Value == true)
                     {
                         // Get character location
 
                         int attempts = 0;
-                        ESIResponse<ESIResponseLocationLocationv1> query1 = null;
+                        ESIResponse<ESIResponseLocationLocationv2> query1 = null;
                         do
                         {
                             Debug.WriteLine("[{0}] Location querying {1}", DateTime.Now.ToString(), _userSsoCharacter.CharacterId);
-                            query1 = await client.GetLocationv1((int)_userSsoCharacter.CharacterId);
+                            query1 = await client.GetLocationv2((int)_userSsoCharacter.CharacterId);
                         } while ((query1 == null || query1.StatusCode == HttpStatusCode.BadGateway) && ++attempts < 2);
                         locationResponse = query1.Result;
 
@@ -270,8 +270,9 @@ namespace borkedLabs.CrestScribe
                         shipResponse = query2.Result;
                     }
                 }
-                catch
+                catch(Exception ex)
                 {
+                    logger.Error(ex, "Exception fetching online status");
                 }
 
                 LastLocationQueryAt = DateTime.UtcNow;

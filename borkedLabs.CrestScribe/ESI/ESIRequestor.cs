@@ -16,7 +16,7 @@ namespace borkedLabs.CrestScribe.ESI
 
         public static string UserAgent { get; set; } = "siggy.scribe/1.0.0.0 (siggy.borkedlabs.com)";
 
-        private static Uri defaultBaseUri = new Uri("https://esi.tech.ccp.is/");
+        private static Uri defaultBaseUri = new Uri("https://esi.evetech.net/");
 
         public static Uri BaseUri
         {

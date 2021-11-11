@@ -12,9 +12,9 @@ namespace borkedLabs.CrestScribe.ESI
     {
         public string AccessToken;
 
-        public async Task<ESIResponse<ESIResponseLocationLocationv1>> GetLocationv1(int characterId)
+        public async Task<ESIResponse<ESIResponseLocationLocationv2>> GetLocationv2(int characterId)
         {
-            return await ESIRequestor.GetAsync<ESIResponseLocationLocationv1>(this, $"/v1/characters/{characterId}/location");
+            return await ESIRequestor.GetAsync<ESIResponseLocationLocationv2>(this, $"/v2/characters/{characterId}/location");
         }
 
         public async Task<ESIResponse<ESIResponseLocationShipv1>> GetShipv1(int characterId)
@@ -22,9 +22,9 @@ namespace borkedLabs.CrestScribe.ESI
             return await ESIRequestor.GetAsync<ESIResponseLocationShipv1>(this, $"/v1/characters/{characterId}/ship");
         }
 
-        public async Task<ESIResponse<ESIResponseLocationOnlinev2>> GetOnlinev2(int characterId)
+        public async Task<ESIResponse<ESIResponseLocationOnlinev3>> GetOnlinev3(int characterId)
         {
-            return await ESIRequestor.GetAsync<ESIResponseLocationOnlinev2>(this, $"/v2/characters/{characterId}/online");
+            return await ESIRequestor.GetAsync<ESIResponseLocationOnlinev3>(this, $"/v3/characters/{characterId}/online");
         }
     }
 }
