@@ -33,7 +33,6 @@ namespace borkedLabs.CrestScribe
                 _poller.Stop();
                 if(!_thread.Join(1000))
                 {
-                    _thread.Abort();
                 }
             }
         }

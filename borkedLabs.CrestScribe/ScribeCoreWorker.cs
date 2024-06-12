@@ -42,10 +42,7 @@ namespace borkedLabs.CrestScribe
             CommandBus.Stop();
 
             _cts.Cancel();
-            if (!_thread.Join(10000))
-            {
-                _thread.Abort();
-            }
+            _thread.Join(10000);
         }
 
         public static CharacterMaintainer GetCharacter(string charOwnerHash)
@@ -148,9 +145,6 @@ namespace borkedLabs.CrestScribe
                             if (!w.Thread.Join(1500))
                             {
                                 logger.Error("Thread failed to join within alloted time");
-
-                                //nuke the thread, really nothing else we can do anyway
-                                w.Thread.Abort();
                             }
                         }
 
@@ -176,8 +170,7 @@ namespace borkedLabs.CrestScribe
             {
                 if (!w.Thread.Join(500))
                 {
-                    //nuke the thread, really nothing else we can do anyway
-                    w.Thread.Abort();
+                    //really nothing else we can do anyway
                 }
             }
 
