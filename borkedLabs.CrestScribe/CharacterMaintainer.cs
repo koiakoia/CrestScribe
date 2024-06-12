@@ -217,7 +217,7 @@ namespace borkedLabs.CrestScribe
 
 
                 ESIResponseLocationLocationv2 locationResponse = null;
-                ESIResponseLocationShipv1 shipResponse = null;
+                ESIResponseLocationShipv2 shipResponse = null;
                 try
                 {
                     if (_userSsoCharacter.ScopeEsiLocationReadOnline)
@@ -261,11 +261,11 @@ namespace borkedLabs.CrestScribe
                         locationResponse = query1.Result;
 
                         attempts = 0;
-                        ESIResponse<ESIResponseLocationShipv1> query2;
+                        ESIResponse<ESIResponseLocationShipv2> query2;
                         do
                         {
                             Debug.WriteLine("[{0}] Ship querying {1}", DateTime.Now.ToString(), _userSsoCharacter.CharacterId);
-                            query2 = await client.GetShipv1((int)_userSsoCharacter.CharacterId);
+                            query2 = await client.GetShipv2((int)_userSsoCharacter.CharacterId);
                         } while ((query2 == null || query2.StatusCode == HttpStatusCode.BadGateway) && ++attempts < 2);
                         shipResponse = query2.Result;
                     }

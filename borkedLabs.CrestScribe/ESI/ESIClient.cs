@@ -17,9 +17,9 @@ namespace borkedLabs.CrestScribe.ESI
             return await ESIRequestor.GetAsync<ESIResponseLocationLocationv2>(this, $"/v2/characters/{characterId}/location");
         }
 
-        public async Task<ESIResponse<ESIResponseLocationShipv1>> GetShipv1(int characterId)
+        public async Task<ESIResponse<ESIResponseLocationShipv2>> GetShipv2(int characterId)
         {
-            return await ESIRequestor.GetAsync<ESIResponseLocationShipv1>(this, $"/v1/characters/{characterId}/ship");
+            return await ESIRequestor.GetAsync<ESIResponseLocationShipv2>(this, $"/v2/characters/{characterId}/ship");
         }
 
         public async Task<ESIResponse<ESIResponseLocationOnlinev3>> GetOnlinev3(int characterId)

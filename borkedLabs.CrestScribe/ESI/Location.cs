@@ -34,7 +34,7 @@ namespace borkedLabs.CrestScribe.ESI
         public UInt64 StructureId { get; set; }
     }
 
-    public class ESIResponseLocationShipv1
+    public class ESIResponseLocationShipv2
     {
         [JsonProperty("ship_item_id")]
         public UInt64 ShipItemId { get; set; }
