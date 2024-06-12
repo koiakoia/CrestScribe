@@ -4,6 +4,8 @@ using System.Diagnostics;
 using System.IO;
 using System.Net;
 using System.Net.Cache;
+using System.Net.Http;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using eZet.EveLib.Core;
@@ -55,7 +57,6 @@ namespace eZet.EveLib.DynamicCrest {
             _publicPool = new SemaphoreSlim(PublicMaxConcurrentRequests, PublicMaxConcurrentRequests);
             _authedPool = new SemaphoreSlim(AuthedMaxConcurrentRequests, AuthedMaxConcurrentRequests);
             UserAgent = Config.UserAgent;
-            Charset = DefaultCharset;
             Cache = Config.CacheFactory("EveCrestCache");
             CacheLevel = CacheLevel.Default;
         }
@@ -126,12 +127,6 @@ namespace eZet.EveLib.DynamicCrest {
         public string UserAgent { get; set; }
 
         /// <summary>
-        ///     Gets or sets the charset.
-        /// </summary>
-        /// <value>The charset.</value>
-        public string Charset { get; set; }
-
-        /// <summary>
         ///     post as an asynchronous operation.
         /// </summary>
         /// <param name="uri">The URI.</param>
@@ -139,16 +134,15 @@ namespace eZet.EveLib.DynamicCrest {
         /// <param name="postData">The post data.</param>
         /// <returns>Task&lt;System.String&gt;.</returns>
         public async Task<string> PostAsync(Uri uri, string accessToken, string postData) {
-            var request = HttpRequestHelper.CreateRequest(uri);
-            request.Method = WebRequestMethods.Http.Post;
-            request.ContentType = "application/json";
+            var request = HttpRequestHelper.CreateRequest(HttpMethod.Post, uri);
+            request.Content = new StringContent(postData, Encoding.UTF8, "application/json");
+
             string retval = null;
-            request.Headers.Add(HttpRequestHeader.Authorization, TokenType + " " + accessToken);
-            HttpRequestHelper.AddPostData(request, postData);
+            request.Headers.Add("Authorization", TokenType + " " + accessToken);
 
             var response = await requestAsync(request, accessToken);
             if (response.StatusCode == HttpStatusCode.Created) {
-                retval = response.GetResponseHeader("Location");
+                retval = response.Headers.Location.ToString();
             }
             return retval;
         }
@@ -161,11 +155,11 @@ namespace eZet.EveLib.DynamicCrest {
         /// <param name="postData">The post data.</param>
         /// <returns>Task&lt;System.Boolean&gt;.</returns>
         public async Task<bool> PutAsync(Uri uri, string accessToken, string postData) {
-            var request = HttpRequestHelper.CreateRequest(uri);
-            request.Method = WebRequestMethods.Http.Put;
-            request.ContentType = "application/json";
-            request.Headers.Add(HttpRequestHeader.Authorization, TokenType + " " + accessToken);
-            HttpRequestHelper.AddPostData(request, postData);
+            var request = HttpRequestHelper.CreateRequest(HttpMethod.Put, uri);
+            request.Content = new StringContent(postData, Encoding.UTF8, "application/json");
+
+            request.Headers.Add("HttpRequestHeader.Authorization", TokenType + " " + accessToken);
+
             var response = await requestAsync(request, accessToken);
             var retval = response.StatusCode == HttpStatusCode.OK;
             return retval;
@@ -179,9 +173,7 @@ namespace eZet.EveLib.DynamicCrest {
         /// <param name="accessToken">The access token.</param>
         /// <returns>Task&lt;System.Boolean&gt;.</returns>
         public async Task<bool> DeleteAsync(Uri uri, string accessToken) {
-            var request = HttpRequestHelper.CreateRequest(uri);
-            request.Method = "DELETE";
-            request.ContentType = "application/json";
+            var request = HttpRequestHelper.CreateRequest(HttpMethod.Delete, uri);
             var response = await requestAsync(request, accessToken);
             var retval = response.StatusCode == HttpStatusCode.OK;
             return retval;
@@ -194,8 +186,7 @@ namespace eZet.EveLib.DynamicCrest {
         /// <param name="uri">The URI.</param>
         /// <returns>Task&lt;CrestOptions&gt;.</returns>
         public async Task<CrestOptions> OptionsAsync(Uri uri) {
-            var request = HttpRequestHelper.CreateRequest(uri);
-            request.Method = "OPTIONS";
+            var request = HttpRequestHelper.CreateRequest(HttpMethod.Options, uri);
             var response = await requestAsync(request, null).ConfigureAwait(false);
             var content = await HttpRequestHelper.GetResponseContentAsync(response).ConfigureAwait(false);
             var result = Serializer.Deserialize<CrestOptions>(content);
@@ -210,9 +201,8 @@ namespace eZet.EveLib.DynamicCrest {
         /// <param name="uri">The URI.</param>
         /// <param name="accessToken">The access token.</param>
         /// <returns>Task.</returns>
-        public async Task<WebHeaderCollection> HeadAsync(Uri uri, string accessToken) {
-            var request = HttpRequestHelper.CreateRequest(uri);
-            request.Method = WebRequestMethods.Http.Head;
+        public async Task<System.Net.Http.Headers.HttpResponseHeaders> HeadAsync(Uri uri, string accessToken) {
+            var request = HttpRequestHelper.CreateRequest(HttpMethod.Head, uri);
             var response = await requestAsync(request, accessToken).ConfigureAwait(false);
             return response.Headers;
             //var content = await HttpRequestHelper.GetResponseContentAsync(response).ConfigureAwait(false);
@@ -241,10 +231,8 @@ namespace eZet.EveLib.DynamicCrest {
             if (CacheLevel == CacheLevel.CacheOnly) return default(T);
 
             // set up request
-            var request = HttpRequestHelper.CreateRequest(uri);
+            var request = HttpRequestHelper.CreateRequest(HttpMethod.Get, uri);
             //request.Accept = ContentTypes.Get<T>(ThrowOnMissingContentType) + ";";
-            request.CachePolicy = new HttpRequestCachePolicy(HttpRequestCacheLevel.Default);
-            request.Method = WebRequestMethods.Http.Get;
             _trace.TraceEvent(TraceEventType.Error, 0, "Initiating Request: " + uri);
             var response = await requestAsync(request, accessToken).ConfigureAwait(false);
 
@@ -271,15 +259,14 @@ namespace eZet.EveLib.DynamicCrest {
         ///     or
         ///     or
         /// </exception>
-        private async Task<HttpWebResponse> requestAsync(HttpWebRequest request, string accessToken) {
+        private async Task<HttpResponseMessage> requestAsync(HttpRequestMessage request, string accessToken) {
             var mode = accessToken == null ? DynamicCrest.CrestMode.Public : DynamicCrest.CrestMode.Authenticated;
-            HttpWebResponse response;
-            if (!string.IsNullOrEmpty(Charset)) request.Accept = request.Accept + " " + Charset;
+            HttpResponseMessage response = new HttpResponseMessage();
             if (!string.IsNullOrEmpty(XRequestedWith)) request.Headers.Add("X-Requested-With", XRequestedWith);
-            if (!string.IsNullOrEmpty(UserAgent)) request.UserAgent = UserAgent;
+            if (!string.IsNullOrEmpty(UserAgent)) request.Headers.UserAgent.ParseAdd(UserAgent);
             try {
                 if (mode == DynamicCrest.CrestMode.Authenticated) {
-                    request.Headers.Add(HttpRequestHeader.Authorization, TokenType + " " + accessToken);
+                    request.Headers.Add("Authorization", TokenType + " " + accessToken);
                     await _authedPool.WaitAsync().ConfigureAwait(false);
                 }
                 else {
@@ -289,8 +276,8 @@ namespace eZet.EveLib.DynamicCrest {
                 //if (response.StatusCode != HttpStatusCode.OK && response.StatusCode != HttpStatusCode.Created && response.StatusCode != HttpStatusCode.Accepted) {
                 //    await throwCrestException(response);
                 //}
-                var deprecated = response.GetResponseHeader("X-Deprecated");
-                if (!string.IsNullOrEmpty(deprecated)) {
+                var deprecated = response.Headers.Contains("X-Deprecated");
+                if (deprecated) {
                     _trace.TraceEvent(TraceEventType.Warning, 0,
                         "This CREST resource is deprecated. Please update to the newest EveLib version or notify the developers.");
                     if (ThrowOnDeprecated) {
@@ -304,22 +291,6 @@ namespace eZet.EveLib.DynamicCrest {
                 _trace.TraceEvent(TraceEventType.Error, 0, "CREST Request Failed.");
                 if (e.Response == null) {
                     throw new EveCrestException(e.Message, e);
-                }
-                response = (HttpWebResponse) e.Response;
-
-                var responseStream = response.GetResponseStream();
-                if (responseStream == null) throw new EveCrestException("Undefined error", e);
-                using (var reader = new StreamReader(responseStream)) {
-                    var responseContent = reader.ReadToEnd();
-                    if (response.StatusCode == HttpStatusCode.InternalServerError ||
-                        response.StatusCode == HttpStatusCode.BadGateway)
-                        throw new EveCrestException(responseContent, e);
-                    var error = Serializer.Deserialize<CrestError>(responseContent);
-                    if (error == null) throw new EveCrestException("Undefined error", e);
-                    _trace.TraceEvent(TraceEventType.Verbose, 0, "Message: {0}, Key: {1}",
-                        "Exception Type: {2}, Ref ID: {3}", error.Message, error.Key, error.ExceptionType,
-                        error.RefId);
-                    throw new EveCrestException(error.Message, e, error.Key, error.ExceptionType, error.RefId);
                 }
             }
             finally {
@@ -352,11 +323,10 @@ namespace eZet.EveLib.DynamicCrest {
         /// </summary>
         /// <param name="header">The header.</param>
         /// <returns>DateTime.</returns>
-        private static DateTime getCacheExpirationTime(NameValueCollection header) {
-            var cache = header.Get("Cache-Control");
+        private static DateTime getCacheExpirationTime(System.Net.Http.Headers.HttpResponseHeaders header) {
+            var cache = header.CacheControl.ToString();
             if (cache == null) return DateTime.UtcNow;
-            var str = cache.Substring(cache.IndexOf('=') + 1);
-            var sec = int.Parse(str);
+            var sec = int.Parse(cache);
             return DateTime.UtcNow.AddSeconds(sec);
         }
 

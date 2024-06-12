@@ -9,15 +9,11 @@ namespace eZet.EveLib.Core {
     ///     This is a class for general EveLib utilities and methods
     /// </summary>
     public class EveLib : EveLibApiBase {
-        private readonly JsonSerializer _jsonSerializer = new JsonSerializer();
-
-        private readonly XmlSerializer _xmlSerializer = new XmlSerializer();
 
         /// <summary>
         ///     Default constructor
         /// </summary>
         public EveLib() {
-            RequestHandler = new RequestHandler(_jsonSerializer);
         }
 
         /// <summary>
@@ -26,7 +22,6 @@ namespace eZet.EveLib.Core {
         /// <param name="uri">URI to request</param>
         /// <returns></returns>
         public Task<dynamic> RequestJsonAsync(string uri) {
-            RequestHandler.Serializer = _jsonSerializer;
             return requestAsync<dynamic>(uri);
         }
 

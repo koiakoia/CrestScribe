@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
-using System.Net;
+using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -17,16 +17,10 @@ namespace eZet.EveLib.Core.Util {
 
         private static readonly TraceSource Trace = new TraceSource("siggy");
 
-        /// <summary>
-        ///     Creates a new HttpWebRequest for the specified URI, and returns it
-        /// </summary>
-        /// <param name="uri">URI to create request for</param>
-        /// <returns>The HttpWebRequest</returns>
-        public static HttpWebRequest CreateRequest(Uri uri) {
-            var request = WebRequest.CreateHttp(uri);
-            request.UserAgent = Config.UserAgent;
-            request.AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.GZip;
-            request.ContentType = ContentType;
+        static readonly HttpClient httpClient = new HttpClient();
+        public static HttpRequestMessage CreateRequest(HttpMethod method, Uri uri) {
+            var request = new HttpRequestMessage(method, uri);
+            request.Headers.UserAgent.ParseAdd(Config.UserAgent);
             return request;
         }
 
@@ -35,8 +29,8 @@ namespace eZet.EveLib.Core.Util {
         /// </summary>
         /// <param name="uri">URI to request</param>
         /// <returns>The response content</returns>
-        public static Task<string> RequestAsync(Uri uri) {
-            var request = CreateRequest(uri);
+        public static Task<string> RequestAsync(HttpMethod method, Uri uri) {
+            var request = CreateRequest(method, uri);
             return GetResponseContentAsync(request);
         }
 
@@ -46,28 +40,19 @@ namespace eZet.EveLib.Core.Util {
         /// <param name="uri">URI to request</param>
         /// <param name="postData"></param>
         /// <returns>The response content</returns>
-        public static Task<string> PostRequestAsync(Uri uri, string postData) {
-            var request = CreateRequest(uri);
-            request.Method = "POST";
-            AddPostData(request, postData);
-            return GetResponseContentAsync(request);
-        }
+        public static async Task<string> PostRequestAsync(Uri uri, string postData) {
 
-        /// <summary>
-        ///     Adds the post data.
-        /// </summary>
-        /// <param name="request">The request.</param>
-        /// <param name="postData">The post data.</param>
-        public static void AddPostData(HttpWebRequest request, string postData) {
-            if (postData == null) return;
-            var data = Encoding.UTF8.GetBytes(postData);
-            request.ContentLength = data.Length;
-            using (var dataStream = request.GetRequestStream()) {
-                dataStream.Write(data, 0, data.Length);
+            using StringContent content = new(postData, Encoding.UTF8, "application/json");
+            using HttpResponseMessage response = await httpClient.PostAsync(
+                uri,
+                content);
+
+            if( response.IsSuccessStatusCode )
+            {
+                return await response.Content.ReadAsStringAsync();
             }
-            //using (var writer = new StreamWriter(request.GetRequestStream())) {
-            //    writer.Write(postData);
-            //}
+
+            return null;
         }
 
         /// <summary>
@@ -75,25 +60,19 @@ namespace eZet.EveLib.Core.Util {
         /// </summary>
         /// <param name="request">The web request</param>
         /// <returns></returns>
-        public static async Task<HttpWebResponse> GetResponseAsync(HttpWebRequest request) {
-            HttpWebResponse response;
+        public static async Task<HttpResponseMessage> GetResponseAsync(HttpRequestMessage request) {
             try {
-                response = (HttpWebResponse) await request.GetResponseAsync().ConfigureAwait(false);
+                using HttpResponseMessage response = await httpClient.SendAsync(request);
                 if (response != null) {
                     Trace.TraceEvent(TraceEventType.Information, 0,
-                        "Response status: " + response.StatusCode + ", " + response.StatusDescription);
-                    Trace.TraceEvent(TraceEventType.Verbose, 0, "From cache: " + response.IsFromCache);
+                        "Response status: " + response.StatusCode);
                 }
+
+                return response;
             }
-            catch (WebException e) {
-                response = (HttpWebResponse) e.Response;
-                if (response == null) throw;
-                Trace.TraceEvent(TraceEventType.Information, 0,
-                    "Response status: " + response.StatusCode + ", " + response.StatusDescription);
-                Trace.TraceEvent(TraceEventType.Verbose, 0, "From cache: " + response.IsFromCache);
+            catch (HttpRequestException e) {
                 throw;
             }
-            return response;
         }
 
         /// <summary>
@@ -101,33 +80,23 @@ namespace eZet.EveLib.Core.Util {
         /// </summary>
         /// <param name="response">The HttpWebResponse</param>
         /// <returns></returns>
-        public static async Task<string> GetResponseContentAsync(HttpWebResponse response) {
-            string data;
-            var responseStream = response.GetResponseStream();
-            if (responseStream == null) return null;
-            using (var reader = new StreamReader(responseStream)) {
-                data = await reader.ReadToEndAsync().ConfigureAwait(false);
-            }
+        public static async Task<string> GetResponseContentAsync(HttpResponseMessage response) {
+            string data = await response.Content.ReadAsStringAsync();
             return data;
         }
 
-        /// <summary>
-        ///     Executes, exctracts and returns response content for a HttpWebRequest
-        /// </summary>
-        /// <param name="request">The HttpWebRequest</param>
-        /// <returns></returns>
-        public static async Task<string> GetResponseContentAsync(HttpWebRequest request) {
-            Trace.TraceEvent(TraceEventType.Start, 0, "Starting request: " + request.RequestUri);
-            var data = "";
-            using (var response = await GetResponseAsync(request).ConfigureAwait(false)) {
-                var responseStream = response.GetResponseStream();
-                if (responseStream == null) return data;
-                using (var reader = new StreamReader(responseStream)) {
-                    data = await reader.ReadToEndAsync().ConfigureAwait(false);
-                }
+        public static async Task<string> GetResponseContentAsync(HttpRequestMessage message)
+        {
+            Trace.TraceEvent(TraceEventType.Start, 0, "Starting request: " + message.RequestUri);
+            using HttpResponseMessage response = await httpClient.SendAsync(message);
+
+            Trace.TraceEvent(TraceEventType.Stop, 0, "Finished request: " + message.RequestUri);
+            if (response.IsSuccessStatusCode)
+            {
+                return await response.Content.ReadAsStringAsync();
             }
-            Trace.TraceEvent(TraceEventType.Stop, 0, "Finished request: " + request.RequestUri);
-            return data;
+
+            return null;
         }
     }
 }

@@ -13,13 +13,16 @@
 // ***********************************************************************
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using System.Web;
+using System.Xml.Linq;
 using eZet.EveLib.Core.Util;
 using Newtonsoft.Json;
 
@@ -202,11 +205,14 @@ namespace eZet.EveLib.EveAuthModule
         /// <returns>Task&lt;AuthResponse&gt;.</returns>
         public async Task<AuthResponse> AuthenticateAsync(string encodedKey, string authCode)
         {
-            HttpWebRequest request = HttpRequestHelper.CreateRequest(new Uri(Protocol + Host + "/v2/oauth/token"));
-            request.Host = Host;
+            HttpRequestMessage request = HttpRequestHelper.CreateRequest(HttpMethod.Post, new Uri(Protocol + Host + "/v2/oauth/token"));
             request.Headers.Add("Authorization", "Basic " + encodedKey);
-            request.Method = "POST";
-            HttpRequestHelper.AddPostData(request, "grant_type=authorization_code&code=" + authCode);
+            var formContent = new FormUrlEncodedContent(new[]
+            {
+                new KeyValuePair<string, string>("grant_type", "authorization_code"),
+                new KeyValuePair<string, string>("code", authCode)
+            });
+            request.Content = formContent;
             string response = await requestAsync(request).ConfigureAwait(false);
             var result = JsonConvert.DeserializeObject<AuthResponse>(response);
             return result;
@@ -220,11 +226,14 @@ namespace eZet.EveLib.EveAuthModule
         /// <returns>Task&lt;AuthResponse&gt;.</returns>
         public async Task<AuthResponse> RefreshAsync(string encodedKey, string refreshToken)
         {
-            HttpWebRequest request = HttpRequestHelper.CreateRequest(new Uri(Protocol + Host + "/v2/oauth/token"));
-            request.Host = Host;
+            HttpRequestMessage request = HttpRequestHelper.CreateRequest(HttpMethod.Post, new Uri(Protocol + Host + "/v2/oauth/token"));
             request.Headers.Add("Authorization", "Basic " + encodedKey);
-            request.Method = "POST";
-            HttpRequestHelper.AddPostData(request, $"grant_type=refresh_token&refresh_token={HttpUtility.UrlEncode(refreshToken)}");
+            var formContent = new FormUrlEncodedContent(new[]
+            {
+                new KeyValuePair<string, string>("grant_type", "refresh_token"),
+                new KeyValuePair<string, string>("code", HttpUtility.UrlEncode(refreshToken))
+            });
+            request.Content = formContent;
             string response = await requestAsync(request).ConfigureAwait(false);
             var result = JsonConvert.DeserializeObject<AuthResponse>(response);
             return result;
@@ -359,28 +368,18 @@ namespace eZet.EveLib.EveAuthModule
             return Convert.ToBase64String(plainTextBytes);
         }
 
-        private async Task<string> requestAsync(HttpWebRequest request)
+        private async Task<string> requestAsync(HttpRequestMessage request)
         {
             try
             {
-                return await HttpRequestHelper.GetResponseContentAsync(request).ConfigureAwait(false);
+                return await HttpRequestHelper.GetResponseContentAsync(request);
             }
-            catch (WebException e)
+            catch (HttpRequestException e)
             {
                 _trace.TraceEvent(TraceEventType.Error, 0, "Auth failed.");
-                var response = (HttpWebResponse)e.Response;
-
-                Stream responseStream = response.GetResponseStream();
-                if (responseStream == null) throw new EveAuthException("Undefined error", e);
-                using (var reader = new StreamReader(responseStream))
-                {
-                    string data = reader.ReadToEnd();
-                    if (response.StatusCode == HttpStatusCode.InternalServerError) throw new EveAuthException(data, e);
-                    var error = JsonConvert.DeserializeObject<AuthError>(data);
-                    _trace.TraceEvent(TraceEventType.Verbose, 0, "Message: {0}, Key: {1}", error.Message, error.Key);
-                    throw new EveAuthException(error.Message, e, error.Key, "", "");
-                }
             }
+
+            return null;
         }
     }
 }
