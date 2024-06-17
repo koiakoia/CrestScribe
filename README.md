@@ -1,4 +1,4 @@
-#CrestScribe
+# CrestScribe
 
 A background processing worker to fetch ESI data (originally CREST).
 It also handles the refresh of access tokens.
@@ -10,7 +10,7 @@ This is used by siggy to fetch character locations.
 This thing is horribly written and awful. 
 Use at your own desire.
 
-##Requirements
+## Requirements
 
 * Visual Studio 2022
 * MySQL
