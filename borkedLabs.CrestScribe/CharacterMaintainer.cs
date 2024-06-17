@@ -15,6 +15,7 @@ using borkedLabs.CrestScribe.Database;
 using borkedLabs.CrestScribe.ESI;
 using Newtonsoft.Json;
 using System.Diagnostics;
+using eZet.EveLib.EveAuthModule;
 
 namespace borkedLabs.CrestScribe
 {
@@ -38,8 +39,6 @@ namespace borkedLabs.CrestScribe
         /// otherwise null until it can get a location
         /// </summary>
         private UInt64? currentSystemId;
-
-        private DynamicCrest _crest;
 
         /// <summary>
         /// Last time we attempted a location query, successful or not
@@ -68,14 +67,16 @@ namespace borkedLabs.CrestScribe
 
         public SsoCharacterState State { get; private set; } = SsoCharacterState.Init;
 
+        /// <summary>
+        ///     Gets or sets the IEveAuth instance used for Eve SSO.
+        /// </summary>
+        /// <value>The eve sso.</value>
+        public IEveAuth _eveAuth { get; set; }
+
         public CharacterMaintainer(UserSsoCharacter character)
         {
             _userSsoCharacter = character;
-            _crest = new DynamicCrest(_userSsoCharacter.AccessToken);
-            _crest.Host = "https://login.eveonline.com/";
-            _crest.EncodedKey = ScribeSettings.Settings.Sso.EncodedKey;
-            _crest.RefreshToken = _userSsoCharacter.RefreshToken;
-            _crest.EnableAutomaticTokenRefresh = false;
+            _eveAuth = new EveAuth();
             LastLocationQueryAt = DateTime.MinValue;
             LastSuccessfulLocationQueryAt = DateTime.MinValue;
 
@@ -92,6 +93,11 @@ namespace borkedLabs.CrestScribe
             }
         }
 
+        public async Task<AuthResponse> refreshAccessTokenAsync()
+        {
+            var response = await _eveAuth.RefreshAsync(ScribeSettings.Settings.Sso.EncodedKey, _userSsoCharacter.RefreshToken).ConfigureAwait(false);
+            return response;
+        }
 
         /// <summary>
         /// Attempts to refresh the tokens. Failure of token refresh (bad tokens) may set the valid flag to false.
@@ -101,7 +107,7 @@ namespace borkedLabs.CrestScribe
         {
             try
             {
-                var response = await _crest.RefreshAccessTokenAsync();
+                var response = await refreshAccessTokenAsync();
 
                 if (response.TokenType == "Bearer")
                 {
@@ -150,9 +156,8 @@ namespace borkedLabs.CrestScribe
                 // Configure OAuth2 access token for authorization: evesso
                 var client = new ESI.ESIClient()
                 {
-                    AccessToken = _crest.AccessToken
+                    AccessToken = _userSsoCharacter.AccessToken
                 };
-
 
                 ESIResponseLocationLocationv2 locationResponse = null;
                 ESIResponseLocationShipv2 shipResponse = null;
@@ -292,8 +297,6 @@ namespace borkedLabs.CrestScribe
             if(charResult != null)
             {
                 _userSsoCharacter = charResult;
-                _crest.AccessToken = _userSsoCharacter.AccessToken;
-                _crest.RefreshToken = _userSsoCharacter.RefreshToken;
 
                 //should we reschedule the character?
                 if( State == SsoCharacterState.InvalidToken &&
