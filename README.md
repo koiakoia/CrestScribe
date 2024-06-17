@@ -1,15 +1,17 @@
 #CrestScribe
 
-A EVE Online CREST  service worker that copies down data from CREST for later usage. The target usage is retrieving character location data.
+A background processing worker to fetch ESI data (originally CREST).
+It also handles the refresh of access tokens.
 
-This C# application is meant to run as a Windows service that performs its job in the background.
+This C# application was originally a Windows service but now ported to .NET 8 so it can run cross platform.
 
 This is used by siggy to fetch character locations.
 
-This thing is horribly written and awful. Use at your own desire.
+This thing is horribly written and awful. 
+Use at your own desire.
 
 ##Requirements
 
-* Visual Studio 2015
+* Visual Studio 2022
 * MySQL
-* .NET Framework 4.5.2
+* .NET 8
