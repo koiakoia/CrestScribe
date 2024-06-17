@@ -40,7 +40,6 @@ namespace borkedLabs.CrestScribe
         private UInt64? currentSystemId;
 
         private DynamicCrest _crest;
-        private Expando _characterCrest;
 
         /// <summary>
         /// Last time we attempted a location query, successful or not
@@ -139,67 +138,6 @@ namespace borkedLabs.CrestScribe
             }
 
             return false;
-        }
-
-        public async Task<bool> GetLocationCrest()
-        {
-            if(_characterCrest == null)
-            {
-                throw new InvalidOperationException("Character CREST data not fetched");
-            }
-
-            try
-            {
-                Expando location = null;
-                try
-                {
-                    location = await _characterCrest.GetAsync(r => r.location);
-                }
-                catch { }
-
-                LastLocationQueryAt = DateTime.UtcNow;
-
-                if ( location != null &&
-                        location.Properties.ContainsKey("solarSystem"))
-                {
-                    ulong locationId = (ulong)location["solarSystem"].id;
-                    var loc = new CharacterLocation()
-                    {
-                        CharacterId = _userSsoCharacter.CharacterId,
-                        SystemId = locationId
-                    };
-
-                    var redis = ScribeCoreWorker.Redis.GetDatabase();
-                    await redis.StringSetAsync("siggy:location:character#" + _userSsoCharacter.CharacterId, JsonConvert.SerializeObject(loc));
-
-                    if (LastSuccessfulLocationQueryAt > DateTime.UtcNow.AddSeconds(ScribeSettings.Settings.CrestLocation.JumpValidAgeSeconds))
-                    {
-                        if (currentSystemId.HasValue && currentSystemId.Value != locationId)
-                        {
-                            var lochistory = new CharacterLocationHistory()
-                            {
-                                CharacterId = _userSsoCharacter.CharacterId,
-                                PreviousSystemId = currentSystemId.Value,
-                                CurrentSystemId = locationId
-                            };
-
-                            lochistory.Create();
-                        }
-                    }
-
-                    currentSystemId = locationId;
-
-                    LastSuccessfulLocationQueryAt = DateTime.UtcNow;
-
-                    return true;
-                }
-
-                return false;
-            }
-            catch(Exception e)
-            {
-                return false;
-            }
         }
 
         private bool? isOnline = null;
@@ -437,34 +375,6 @@ namespace borkedLabs.CrestScribe
                 if ( ShouldGetLocation())
                 {
                     if (!await GetLocationESI())
-                    {
-                        State = SsoCharacterState.ErrorSlowdown;
-                        //not an active char or CREST is having issues, slow down
-                        setTimer(20);
-
-                        return;
-                    }
-
-                }
-            }
-            else if (_userSsoCharacter.ScopeCharacterLocationRead)
-            {
-                if (_characterCrest == null)
-                {
-                    try
-                    {
-                        _characterCrest = await (await (await _crest.GetAsync(_crest.Host)).GetAsync(r => r.decode)).GetAsync(r => r.character);
-                    }
-                    catch
-                    {
-                        _characterCrest = null;
-                    }
-                }
-
-                if (_characterCrest != null &&
-                    ShouldGetLocation())
-                {
-                    if (!await GetLocationCrest())
                     {
                         State = SsoCharacterState.ErrorSlowdown;
                         //not an active char or CREST is having issues, slow down

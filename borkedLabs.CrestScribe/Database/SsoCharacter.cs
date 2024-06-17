@@ -52,9 +52,6 @@ namespace borkedLabs.CrestScribe.Database
         public UInt64 CharacterId { get; set; }
 
         public bool AlwaysTrackLocation { get; set; }
-
-        public bool ScopeCharacterLocationRead { get; set; }
-        public bool ScopeCharacterNavigationWrite { get; set; }
         public bool ScopeEsiLocationReadLocation { get; set; }
         public bool ScopeEsiLocationReadShipType { get; set; }
         public bool ScopeEsiLocationReadOnline { get; set; }
@@ -107,7 +104,7 @@ namespace borkedLabs.CrestScribe.Database
         public UserSsoCharacter()
         {
         }
-        
+
         public bool Save()
         {
             using (MySqlConnection sql = SqlContext.GetConnection())
@@ -137,8 +134,6 @@ namespace borkedLabs.CrestScribe.Database
                                     access_token_expiration TokenExpiration, created_at CreatedAt, 
                                     updated_at UpdatedAt, valid Valid,
                                     always_track_location AlwaysTrackLocation,
-                                    scope_character_location_read ScopeCharacterLocationRead,
-                                    scope_character_navigation_write ScopeCharacterNavigationWrite,
                                     scope_esi_location_read_location ScopeEsiLocationReadLocation,
                                     scope_esi_location_read_ship_type ScopeEsiLocationReadShipType,
                                     scope_esi_location_read_online ScopeEsiLocationReadOnline,
