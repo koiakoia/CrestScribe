@@ -15,7 +15,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\evelib\EveLib.Core\EveLib.Core.csproj" />
-    <ProjectReference Include="..\evelib\EveLib.DynamicCrest\EveLib.DynamicCrest.csproj" />
     <ProjectReference Include="..\evelib\EveLib.EveAuth\EveLib.EveAuth.csproj" />
   </ItemGroup>
   <ItemGroup>
