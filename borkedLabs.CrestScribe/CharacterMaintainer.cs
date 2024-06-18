@@ -14,7 +14,7 @@ using borkedLabs.CrestScribe.Database;
 using borkedLabs.CrestScribe.ESI;
 using Newtonsoft.Json;
 using System.Diagnostics;
-using eZet.EveLib.EveAuthModule;
+using System.Net.Http;
 
 namespace borkedLabs.CrestScribe
 {
@@ -70,12 +70,11 @@ namespace borkedLabs.CrestScribe
         ///     Gets or sets the IEveAuth instance used for Eve SSO.
         /// </summary>
         /// <value>The eve sso.</value>
-        public IEveAuth _eveAuth { get; set; }
+        public static EveAuth _eveAuth { get; set; } = new EveAuth();
 
         public CharacterMaintainer(UserSsoCharacter character)
         {
             _userSsoCharacter = character;
-            _eveAuth = new EveAuth();
             LastLocationQueryAt = DateTime.MinValue;
             LastSuccessfulLocationQueryAt = DateTime.MinValue;
 
@@ -117,18 +116,16 @@ namespace borkedLabs.CrestScribe
                     return true;
                 }
             }
-            catch (eZet.EveLib.EveAuthModule.EveAuthException e)
+            catch (HttpRequestException e)
             {
                 //unforunately we want to be a little effiecient determining key status
                 //so see if we got a 400 error
                 //we are ignoring other errors because god knows what fuckups can happen by CCP and
                 //we dont want to invalidate all our keys
-                var webResponse = e.WebException.Response as HttpWebResponse;
-
-                if(webResponse != null)
+                if(e.StatusCode.HasValue)
                 {
-                    if(webResponse.StatusCode == HttpStatusCode.BadRequest ||
-                        webResponse.StatusCode == HttpStatusCode.Unauthorized)
+                    if(e.StatusCode == HttpStatusCode.BadRequest ||
+                        e.StatusCode == HttpStatusCode.Unauthorized)
                     {
                         _userSsoCharacter.Valid = false;
                         return true;

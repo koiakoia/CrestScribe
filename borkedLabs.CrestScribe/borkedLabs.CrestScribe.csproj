@@ -14,10 +14,6 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\evelib\EveLib.Core\EveLib.Core.csproj" />
-    <ProjectReference Include="..\evelib\EveLib.EveAuth\EveLib.EveAuth.csproj" />
-  </ItemGroup>
-  <ItemGroup>
     <PackageReference Include="Dapper">
       <Version>2.1.35</Version>
     </PackageReference>

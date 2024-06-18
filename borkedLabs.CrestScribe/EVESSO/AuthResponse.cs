@@ -14,7 +14,8 @@
 
 using Newtonsoft.Json;
 
-namespace eZet.EveLib.EveAuthModule {
+namespace borkedLabs.CrestScribe
+{
     /// <summary>
     ///     Class AuthResponse.
     /// </summary>
