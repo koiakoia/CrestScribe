@@ -12,7 +12,7 @@ namespace borkedLabs.CrestScribe.ESI
 {
     public static class ESIRequestor
     {
-        public static HttpClient HttpClient = new HttpClient(new Http2CustomHandler());
+        public static HttpClient HttpClient = new HttpClient();
 
         public static string UserAgent { get; set; } = "siggy.scribe/1.0.0.0 (siggy.borkedlabs.com)";
 
