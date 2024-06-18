@@ -263,7 +263,7 @@ namespace borkedLabs.CrestScribe
 
                 return false;
             }
-            catch (Exception e)
+            catch
             {
                 return false;
             }
